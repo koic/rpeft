@@ -5,7 +5,7 @@ require 'tmpdir'
 
 module LLMTune
   # A training dataset. `Dataset.coerce` turns any value accepted by the `dataset:` keyword
-  # (a path String, a Pathname, or a Dataset) into a validated Dataset.
+  # (a path String, a Pathname, an Enumerable of record Hashes, or a Dataset) into a validated Dataset.
   #
   # Three JSONL line formats are accepted and detected from the first line: `{"text": ...}` is
   # passed through as is, `{"instruction": ..., "input": ..., "output": ...}` is rendered into
@@ -13,7 +13,29 @@ module LLMTune
   # for the backend to render with the tokenizer's chat template.
   class Dataset
     def self.coerce(value)
-      value.is_a?(Dataset) ? value : new(value)
+      return value if value.is_a?(Dataset)
+      return from_records(value) if value.is_a?(Enumerable)
+
+      new(value)
+    end
+
+    # Builds a dataset from Ruby records (Hashes in any of the three formats, Symbol keys included)
+    # by writing them to a temporary JSONL file, so in-memory data needs no intermediate file of its own.
+    def self.from_records(records)
+      path = File.join(Dir.mktmpdir('llm_tune-dataset-'), 'records.jsonl')
+      written = 0
+
+      File.open(path, 'w') do |out|
+        records.each do |record|
+          raise DatasetError, "each dataset record must be a Hash, got #{record.class}" unless record.is_a?(Hash)
+
+          out.puts JSON.generate(record)
+          written += 1
+        end
+      end
+      raise DatasetError, 'dataset is empty: no records were given' if written.zero?
+
+      new(path)
     end
 
     attr_reader :path, :format

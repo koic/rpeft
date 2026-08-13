@@ -192,6 +192,15 @@ so the conversation is formatted the way the model expects:
 {"messages":[{"role":"user","content":"How do I reverse an array?"},{"role":"assistant","content":"[1, 2, 3].reverse"}]}
 ```
 
+`dataset:` also accepts any Enumerable of record Hashes in the same three shapes, so data built in Ruby needs no file of its own:
+
+```ruby
+LLMTune::LoRA.train(
+  model: 'Qwen/Qwen2.5-Coder-0.5B',
+  dataset: Article.published.map { |article| { text: article.body } }
+)
+```
+
 A useful fine-tuning dataset teaches the model something it does not already do. The bundled `examples/ruby_answers.jsonl` teaches the model to answer programming questions with Ruby code only:
 the base model replies with an English paragraph, while the fine-tuned model replies with a bare snippet and a `# =>` comment. The effect is visible at a glance in any spoken language,
 because the difference is the shape of the output rather than its wording. See `examples/train_and_merge.rb` for a runnable example.

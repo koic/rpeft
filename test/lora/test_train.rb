@@ -139,6 +139,18 @@ class TestLoRATrain < LLMTuneTest
     assert_raises(LLMTune::DatasetError) { train }
   end
 
+  def test_trains_from_an_array_of_records
+    LLMTune::LoRA.train(
+      model: 'fake/model',
+      dataset: [{text: 'from memory'}],
+      output_dir: File.join(@workdir, 'adapter')
+    )
+
+    _name, config = @backend.calls.find { |call| call.first == :train_lora }
+
+    assert_equal 'from memory', JSON.parse(File.readlines(config['dataset_path']).first)['text']
+  end
+
   def test_sends_the_text_dataset_format_by_default
     train
 

@@ -26,6 +26,45 @@ class TestDataset < Minitest::Test
     assert_same dataset, LLMTune::Dataset.coerce(dataset)
   end
 
+  def test_coerce_builds_a_dataset_from_records
+    dataset = LLMTune::Dataset.coerce([{text: 'first'}, {text: 'second'}])
+
+    assert_equal :text, dataset.format
+
+    records = File.readlines(dataset.path).map { |line| JSON.parse(line) }
+
+    assert_equal(%w(first second), records.map { |record| record['text'] })
+  end
+
+  def test_from_records_accepts_messages_with_symbol_keys
+    dataset = LLMTune::Dataset.from_records([{messages: [{role: 'user', content: 'hi'}]}])
+
+    assert_equal :messages, dataset.format
+
+    record = JSON.parse(File.readlines(dataset.path).first)
+
+    assert_equal 'user', record.dig('messages', 0, 'role')
+  end
+
+  def test_from_records_renders_instruction_records
+    dataset = LLMTune::Dataset.from_records([{instruction: 'Say hi', output: 'hi'}])
+
+    assert_equal :instruction, dataset.format
+    assert_includes JSON.parse(File.readlines(dataset.path).first)['text'], '### Instruction:'
+  end
+
+  def test_from_records_rejects_a_non_hash_record
+    error = assert_raises(LLMTune::DatasetError) { LLMTune::Dataset.from_records(['just a string']) }
+
+    assert_match(/must be a Hash/, error.message)
+  end
+
+  def test_from_records_rejects_an_empty_enumerable
+    error = assert_raises(LLMTune::DatasetError) { LLMTune::Dataset.from_records([]) }
+
+    assert_match(/no records/, error.message)
+  end
+
   def test_rejects_a_missing_file
     error = assert_raises(LLMTune::DatasetError) {
       LLMTune::Dataset.new(File.join(@workdir, 'none.jsonl'))
