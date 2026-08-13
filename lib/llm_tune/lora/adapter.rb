@@ -97,6 +97,25 @@ module LLMTune
 
         Model.new(path: result['model_path'] || merged_dir, base_model: result['base_model'] || base_model)
       end
+
+      # Generates with the adapter applied on top of the base model, without merging.
+      # Useful for verifying an adapter before producing a merged model.
+      def generate(prompt, max_new_tokens: 64, device: :auto, temperature: nil, top_p: nil, seed: nil)
+        unless base_model
+          raise GenerationError, 'base model is unknown; pass base_model: to Adapter.load (or --model to the CLI)'
+        end
+
+        Generation.run(
+          model: base_model,
+          prompt: prompt,
+          adapter_path: path,
+          max_new_tokens: max_new_tokens,
+          device: device,
+          temperature: temperature,
+          top_p: top_p,
+          seed: seed
+        )
+      end
     end
   end
 end

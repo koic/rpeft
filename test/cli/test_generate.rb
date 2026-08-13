@@ -3,13 +3,47 @@
 require 'test_helper'
 
 class TestCLIGenerate < LLMTuneTest
-  def test_requires_model_and_prompt
+  def setup
+    super
+    @workdir = Dir.mktmpdir('llm_tune_test')
+  end
+
+  def teardown
+    FileUtils.remove_entry(@workdir)
+    super
+  end
+
+  def test_requires_a_prompt
     status, _out, err = run_cli(%w(generate))
 
     assert_equal 2, status
-    assert_includes err, '--model'
     assert_includes err, '--prompt'
     assert_empty @backend.calls
+  end
+
+  def test_requires_a_model_or_an_adapter
+    status, _out, err = run_cli(['generate', '--prompt', 'User: hi'])
+
+    assert_equal 2, status
+    assert_includes err, '--model or --adapter'
+    assert_empty @backend.calls
+  end
+
+  def test_generates_from_an_adapter_without_merging
+    adapter_dir = File.join(@workdir, 'adapter')
+    FileUtils.mkdir_p(adapter_dir)
+    metadata = {'kind' => 'lora_adapter', 'base_model' => 'meta/base', 'lora' => {'rank' => 8}}
+    File.write(File.join(adapter_dir, 'llm_tune.json'), JSON.generate(metadata))
+
+    status, out, = run_cli(['generate', '--adapter', adapter_dir, '--prompt', 'User: hi', '--device', 'cpu'])
+
+    assert_equal 0, status
+    assert_includes out, 'fake completion'
+
+    _name, config = @backend.calls.last
+
+    assert_equal 'meta/base', config['model']
+    assert_equal adapter_dir, config['adapter_path']
   end
 
   def test_prints_the_completion

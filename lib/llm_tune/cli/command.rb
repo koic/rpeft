@@ -36,6 +36,9 @@ module LLMTune
         missing = required_options.reject { |key| options.key?(key) }
         return usage_error("missing required option(s): #{format_options(missing)}", parser) unless missing.empty?
 
+        violation = usage_violation(options)
+        return usage_error(violation, parser) if violation
+
         execute(options) || 0
       rescue Error => e
         @err.puts "llm-tune: #{e.message}"
@@ -46,6 +49,12 @@ module LLMTune
 
       def required_options
         []
+      end
+
+      # Commands override this for constraints that a required-option list cannot express;
+      # a String return value is a usage error.
+      def usage_violation(_options)
+        nil
       end
 
       def usage_error(message, parser)

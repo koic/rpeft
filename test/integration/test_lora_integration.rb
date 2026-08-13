@@ -54,6 +54,10 @@ class TestLoRAIntegration < Minitest::Test
     assert_equal 'cpu', adapter.metadata.dig('training', 'device')
     refute_empty adapter.target_modules
 
+    adapter_completion = adapter.generate('Ruby is', max_new_tokens: 8, device: :cpu)
+
+    assert_instance_of String, adapter_completion
+
     model = adapter.merge(output_dir: File.join(@workdir, 'merged'))
 
     assert_path_exists File.join(model.path, 'config.json')

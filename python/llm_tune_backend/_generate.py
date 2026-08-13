@@ -18,6 +18,14 @@ def generate(config):
             trust_remote_code=config.get("trust_remote_code", False),
         )
 
+        adapter_path = config.get("adapter_path")
+        if adapter_path:
+            with stage("model_load"):
+                from peft import PeftModel
+
+                # Applied on top of the base weights; not merged.
+                model = PeftModel.from_pretrained(model, adapter_path)
+
         with stage("generation"):
             import torch
 

@@ -4,7 +4,7 @@ module LLMTune
   module CLI
     # @api private
     class Generate < Command
-      REQUIRED_OPTIONS = %i(model prompt).freeze
+      REQUIRED_OPTIONS = %i(prompt).freeze
       PASSTHROUGH_OPTIONS = %i(max_new_tokens device temperature top_p seed).freeze
       DEVICES = %w(auto cuda mps cpu).freeze
 
@@ -12,9 +12,12 @@ module LLMTune
 
       def option_parser(options)
         OptionParser.new do |o|
-          o.banner = 'Usage: llm-tune generate --model DIR_OR_ID --prompt TEXT [options]'
-          o.on('--model MODEL', 'Model directory or Hugging Face model id') do |v|
+          o.banner = 'Usage: llm-tune generate {--model DIR_OR_ID | --adapter DIR} --prompt TEXT [options]'
+          o.on('--model MODEL', 'Model directory or Hugging Face model id (base model override with --adapter)') do |v|
             options[:model] = v
+          end
+          o.on('--adapter DIR', 'LoRA adapter directory, applied on top of its base model without merging') do |v|
+            options[:adapter] = v
           end
           o.on('--prompt TEXT', 'Prompt to complete') do |v|
             options[:prompt] = v
@@ -39,14 +42,26 @@ module LLMTune
         REQUIRED_OPTIONS
       end
 
+      def usage_violation(options)
+        return nil if options[:model] || options[:adapter]
+
+        'missing required option(s): --model or --adapter'
+      end
+
       def execute(options)
         generate_options = {}
         PASSTHROUGH_OPTIONS.each do |key|
           generate_options[key] = options[key] if options.key?(key)
         end
 
-        model = Model.new(path: options[:model])
-        @out.puts model.generate(options[:prompt], **generate_options)
+        target = if options[:adapter]
+          LoRA::Adapter.load(options[:adapter], base_model: options[:model])
+        else
+          Model.new(path: options[:model])
+        end
+
+        @out.puts target.generate(options[:prompt], **generate_options)
+
         0
       end
     end

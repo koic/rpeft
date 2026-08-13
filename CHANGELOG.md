@@ -7,6 +7,7 @@
 - Adapter merging (`adapter.merge`) using PEFT's `merge_and_unload`
 - Text generation with greedy decoding from a base or fine-tuned model (`LLMTune::Model#generate`, `llm-tune generate`)
 - Sampling options for text generation (`temperature:`, `top_p:`, `seed:`)
+- Adapter inference without merging (`LLMTune::LoRA::Adapter#generate`, `llm-tune generate --adapter`)
 - Device auto-detection with CUDA > MPS > CPU priority (`LLMTune.device`)
 - JSONL dataset support (`{"text": "..."}` lines)
 - `llm-tune` CLI: `lora train`, `lora merge`, `doctor`, `version`

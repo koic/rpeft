@@ -144,6 +144,17 @@ different wording on each call. `seed:` makes sampled output reproducible again:
 model.generate(prompt, temperature: 0.7, top_p: 0.9, seed: 42)
 ```
 
+`LLMTune::LoRA::Adapter#generate` runs the same generation with the adapter applied on top of its base model, without merging.
+Since an adapter is a few MB against roughly a gigabyte for a merged model, this is the cheap way to try an adapter,
+including one received from someone else:
+
+```ruby
+adapter = LLMTune::LoRA::Adapter.load('./ruby-lora')
+adapter.generate(prompt, max_new_tokens: 64) # the same output, no merged model needed
+```
+
+The base model is read from the metadata recorded in the adapter directory, so it does not have to be given again.
+
 ### Options
 
 | Option            | Default | Meaning                                                                                 |
@@ -237,6 +248,14 @@ $ llm-tune generate \
 
 `--model` also accepts a Hugging Face model id, so the same command shows the base model's output for comparison.
 `--temperature`, `--top-p`, and `--seed` are the CLI equivalents of the sampling options above.
+Passing `--adapter` instead generates with the adapter applied on top of its base model, without merging:
+
+```console
+$ llm-tune generate \
+    --adapter ruby-lora \
+    --prompt $'User: How do I reverse an array?\nAssistant:'
+```
+
 `llm-tune doctor` and `llm-tune version` are also available.
 
 ## Process model and limitations

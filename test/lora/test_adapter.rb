@@ -125,6 +125,27 @@ class TestLoRAAdapter < LLMTuneTest
     assert_empty @backend.calls
   end
 
+  def test_generate_applies_the_adapter_without_merging
+    completion = new_adapter.generate('User: hi')
+
+    assert_equal 'fake completion', completion
+
+    name, config = @backend.calls.last
+
+    assert_equal :generate, name
+    assert_equal 'fake/model', config['model']
+    assert_equal @adapter_dir, config['adapter_path']
+  end
+
+  def test_generate_without_a_base_model_raises
+    adapter = LLMTune::LoRA::Adapter.new(path: @adapter_dir, base_model: nil)
+
+    assert_raises(LLMTune::GenerationError) do
+      adapter.generate('User: hi')
+    end
+    assert_empty @backend.calls
+  end
+
   private
 
   def new_adapter
