@@ -21,16 +21,27 @@ def generate(config):
         with stage("generation"):
             import torch
 
+            if config.get("seed") is not None:
+                torch.manual_seed(config["seed"])
+
+            # Greedy decoding by default keeps the output deterministic
+            # for a given model and prompt, which demo scripts rely on;
+            # temperature or top_p switches sampling on.
+            generation_options = {
+                "max_new_tokens": config.get("max_new_tokens", 64),
+                "do_sample": False,
+                "pad_token_id": tokenizer.pad_token_id,
+            }
+            if config.get("temperature") is not None:
+                generation_options["temperature"] = float(config["temperature"])
+                generation_options["do_sample"] = True
+            if config.get("top_p") is not None:
+                generation_options["top_p"] = float(config["top_p"])
+                generation_options["do_sample"] = True
+
             inputs = tokenizer(config["prompt"], return_tensors="pt").to(device)
             with torch.no_grad():
-                # Greedy decoding keeps the output deterministic for a
-                # given model and prompt, which demo scripts rely on.
-                output_ids = model.generate(
-                    **inputs,
-                    max_new_tokens=config.get("max_new_tokens", 64),
-                    do_sample=False,
-                    pad_token_id=tokenizer.pad_token_id,
-                )
+                output_ids = model.generate(**inputs, **generation_options)
             completion_ids = output_ids[0][inputs["input_ids"].shape[1]:]
             completion = tokenizer.decode(completion_ids, skip_special_tokens=True)
 

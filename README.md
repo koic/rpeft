@@ -137,6 +137,13 @@ model = adapter.merge
 model.generate(prompt, max_new_tokens: 64) # Ruby code from the fine-tuned model
 ```
 
+Passing `temperature:` or `top_p:` switches decoding from greedy to sampling, which makes the model produce
+different wording on each call. `seed:` makes sampled output reproducible again:
+
+```ruby
+model.generate(prompt, temperature: 0.7, top_p: 0.9, seed: 42)
+```
+
 ### Options
 
 | Option            | Default | Meaning                                                                                 |
@@ -228,7 +235,9 @@ $ llm-tune generate \
     --prompt $'User: How do I reverse an array?\nAssistant:'
 ```
 
-`--model` also accepts a Hugging Face model id, so the same command shows the base model's output for comparison. `llm-tune doctor` and `llm-tune version` are also available.
+`--model` also accepts a Hugging Face model id, so the same command shows the base model's output for comparison.
+`--temperature`, `--top-p`, and `--seed` are the CLI equivalents of the sampling options above.
+`llm-tune doctor` and `llm-tune version` are also available.
 
 ## Process model and limitations
 

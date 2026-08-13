@@ -97,4 +97,42 @@ class TestModel < LLMTuneTest
 
     assert_raises(LLMTune::ConfigurationError) { model.generate('User: hi', device: :tpu) }
   end
+
+  def test_generate_passes_sampling_options_when_given
+    LLMTune::Model.new(path: @model_dir).generate('User: hi', temperature: 0.7, top_p: 0.9, seed: 42)
+
+    _name, config = @backend.calls.last
+
+    assert_in_delta 0.7, config['temperature']
+    assert_in_delta 0.9, config['top_p']
+    assert_equal 42, config['seed']
+  end
+
+  def test_generate_omits_sampling_options_by_default
+    LLMTune::Model.new(path: @model_dir).generate('User: hi')
+
+    _name, config = @backend.calls.last
+
+    refute config.key?('temperature')
+    refute config.key?('top_p')
+    refute config.key?('seed')
+  end
+
+  def test_generate_rejects_a_non_positive_temperature
+    model = LLMTune::Model.new(path: @model_dir)
+
+    assert_raises(LLMTune::ConfigurationError) { model.generate('User: hi', temperature: 0) }
+  end
+
+  def test_generate_rejects_an_out_of_range_top_p
+    model = LLMTune::Model.new(path: @model_dir)
+
+    assert_raises(LLMTune::ConfigurationError) { model.generate('User: hi', top_p: 1.5) }
+  end
+
+  def test_generate_rejects_a_non_integer_seed
+    model = LLMTune::Model.new(path: @model_dir)
+
+    assert_raises(LLMTune::ConfigurationError) { model.generate('User: hi', seed: 'x') }
+  end
 end

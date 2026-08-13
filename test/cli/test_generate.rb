@@ -27,6 +27,18 @@ class TestCLIGenerate < LLMTuneTest
     assert_equal 'cpu', config['device']
   end
 
+  def test_passes_sampling_options_through
+    status, = run_cli(['generate', '--model', 'fake/model', '--prompt', 'User: hi', '--temperature', '0.7', '--top-p', '0.9', '--seed', '42'])
+
+    assert_equal 0, status
+
+    _name, config = @backend.calls.last
+
+    assert_in_delta 0.7, config['temperature']
+    assert_in_delta 0.9, config['top_p']
+    assert_equal 42, config['seed']
+  end
+
   def test_reports_backend_errors_with_exit_status_one
     LLMTune.backend = FakeBackend.new(error: LLMTune::GenerationError.new('generation failed'))
 

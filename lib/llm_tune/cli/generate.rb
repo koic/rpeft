@@ -5,7 +5,7 @@ module LLMTune
     # @api private
     class Generate < Command
       REQUIRED_OPTIONS = %i(model prompt).freeze
-      PASSTHROUGH_OPTIONS = %i(max_new_tokens device).freeze
+      PASSTHROUGH_OPTIONS = %i(max_new_tokens device temperature top_p seed).freeze
       DEVICES = %w(auto cuda mps cpu).freeze
 
       private
@@ -21,6 +21,15 @@ module LLMTune
           end
           o.on('--max-new-tokens N', Integer, 'Maximum number of tokens to generate (default: 64)') do |v|
             options[:max_new_tokens] = v
+          end
+          o.on('--temperature F', Float, 'Sampling temperature (default: greedy decoding)') do |v|
+            options[:temperature] = v
+          end
+          o.on('--top-p F', Float, 'Nucleus sampling threshold') do |v|
+            options[:top_p] = v
+          end
+          o.on('--seed N', Integer, 'Random seed for sampling') do |v|
+            options[:seed] = v
           end
           o.on('--device DEVICE', DEVICES, 'auto, cuda, mps, or cpu (default: auto)') { |v| options[:device] = v.to_sym }
         end
