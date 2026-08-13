@@ -118,6 +118,15 @@ model = adapter.merge # W' = W + B A
 model.save('./ruby-model')
 ```
 
+Passing `eval_dataset:` holds a second dataset out of training and evaluates against it after every epoch.
+The final validation loss lands in the adapter metadata, which is how you tell learning apart from memorizing:
+
+```ruby
+adapter = LLMTune::LoRA.train(model: ..., dataset: 'train.jsonl', eval_dataset: 'validation.jsonl')
+adapter.metadata.dig('training', 'train_loss') # => 0.74
+adapter.metadata.dig('training', 'eval_loss')  # => 0.91
+```
+
 `LLMTune::LoRA.train` returns an `LLMTune::LoRA::Adapter` that knows its `path`, `base_model`, `rank`, `alpha`, `dropout`, `target_modules`, and training `metadata`.
 `adapter.merge` returns an `LLMTune::Model` with `path` and `base_model`. `save` moves the artifact to the given path; a destination produced by a previous `save` is replaced,
 so scripts can be re-run, while any other existing path is refused.
@@ -167,6 +176,7 @@ The base model is read from the metadata recorded in the adapter directory, so i
 | `batch_size:`     | `4`     | Per-device batch size                                                                   |
 | `learning_rate:`  | `2e-4`  | Learning rate                                                                           |
 | `max_length:`     | `512`   | Max token length per example                                                            |
+| `eval_dataset:`   | `nil`   | Held-out dataset, in the same format as `dataset:`. Enables per-epoch evaluation        |
 | `output_dir:`     | `nil`   | Adapter output directory. `nil` uses a temporary directory; `save` moves it             |
 | `device:`         | `:auto` | `:auto`, `:cuda`, `:mps`, or `:cpu`                                                     |
 

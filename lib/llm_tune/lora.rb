@@ -16,7 +16,7 @@ module LLMTune
     POSITIVE_NUMBER_OPTIONS = %i(alpha learning_rate).freeze
 
     class << self
-      def train(model:, dataset:, rank: 8, alpha: 16, dropout: 0.05, target_modules: nil, epochs: 3, batch_size: 4, learning_rate: 2e-4, max_length: 512, output_dir: nil, device: :auto)
+      def train(model:, dataset:, eval_dataset: nil, rank: 8, alpha: 16, dropout: 0.05, target_modules: nil, epochs: 3, batch_size: 4, learning_rate: 2e-4, max_length: 512, output_dir: nil, device: :auto)
         options = {
           rank: rank,
           alpha: alpha,
@@ -29,9 +29,11 @@ module LLMTune
         }
         validate_options(options)
         training_dataset = Dataset.coerce(dataset)
+        evaluation_dataset = coerce_eval_dataset(eval_dataset, training_dataset)
         resolved_device = Device.resolve(device)
         adapter_dir = prepare_output_dir(output_dir)
 
+        options[:eval_dataset] = evaluation_dataset
         result = LLMTune.backend.train_lora(
           request_payload(model, training_dataset, adapter_dir, resolved_device, options)
         )
@@ -78,6 +80,16 @@ module LLMTune
         raise ConfigurationError, "target_modules must be nil (auto) or a non-empty Array of Strings, got #{target_modules.inspect}"
       end
 
+      # The backend tokenizes both datasets the same way, so mixing formats would silently mis-render the evaluation set.
+      def coerce_eval_dataset(eval_dataset, training_dataset)
+        return nil unless eval_dataset
+
+        dataset = Dataset.coerce(eval_dataset)
+        return dataset if dataset.backend_format == training_dataset.backend_format
+
+        raise ConfigurationError, "eval_dataset format (#{dataset.format}) must match dataset format (#{training_dataset.format})"
+      end
+
       def prepare_output_dir(output_dir)
         dir = File.expand_path(output_dir || Dir.mktmpdir('llm_tune-adapter-'))
         FileUtils.mkdir_p(dir)
@@ -86,7 +98,7 @@ module LLMTune
       end
 
       def request_payload(model, dataset, adapter_dir, device, options)
-        {
+        payload = {
           'base_model' => model,
           'dataset_path' => dataset.path,
           'dataset_format' => dataset.backend_format,
@@ -107,6 +119,9 @@ module LLMTune
             'target_modules' => options[:target_modules]
           }
         }
+        payload['eval_dataset_path'] = options[:eval_dataset].path if options[:eval_dataset]
+
+        payload
       end
 
       def build_adapter(adapter_dir:, model:, dataset_path:, device:, options:, result:)
@@ -153,6 +168,7 @@ module LLMTune
             'max_length' => options[:max_length],
             'device' => result['device'] || device.to_s,
             'train_loss' => result['final_loss'],
+            'eval_loss' => result['eval_loss'],
             'duration_seconds' => result['train_runtime_seconds']
           }
         }

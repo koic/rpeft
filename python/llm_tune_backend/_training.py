@@ -27,12 +27,23 @@ def train_lora(config):
             max_length=config.get("max_length", 512),
             dataset_format=config.get("dataset_format", "text"),
         )
+        eval_dataset = None
+        if config.get("eval_dataset_path"):
+            eval_dataset = _data.load_tokenized_dataset(
+                config["eval_dataset_path"],
+                tokenizer,
+                text_field=config.get("text_field", "text"),
+                max_length=config.get("max_length", 512),
+                dataset_format=config.get("dataset_format", "text"),
+            )
 
         with stage("training"):
             model, target_modules, param_counts = _apply_lora(model, lora)
-            trainer = _build_trainer(model, tokenizer, dataset, config, device, dtype)
+            trainer = _build_trainer(model, tokenizer, dataset, eval_dataset, config, device, dtype)
             metrics = trainer.train().metrics
             steps = trainer.state.global_step
+            if eval_dataset is not None:
+                metrics = dict(metrics, **trainer.evaluate())
 
         with stage("adapter_save"):
             model.save_pretrained(output_dir)
@@ -73,7 +84,7 @@ def _apply_lora(model, lora):
     return model, target_modules, model.get_nb_trainable_parameters()
 
 
-def _build_trainer(model, tokenizer, dataset, config, device, dtype):
+def _build_trainer(model, tokenizer, dataset, eval_dataset, config, device, dtype):
     from transformers import (
         DataCollatorForLanguageModeling,
         Trainer,
@@ -87,6 +98,7 @@ def _build_trainer(model, tokenizer, dataset, config, device, dtype):
         learning_rate=config.get("learning_rate", 2e-4),
         logging_steps=config.get("logging_steps", 5),
         logging_strategy="steps",
+        eval_strategy="epoch" if eval_dataset is not None else "no",
         save_strategy="no",
         report_to=[],
         seed=config.get("seed", 42),
@@ -100,6 +112,7 @@ def _build_trainer(model, tokenizer, dataset, config, device, dtype):
         model=model,
         args=args,
         train_dataset=dataset,
+        eval_dataset=eval_dataset,
         data_collator=DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False),
     )
 
@@ -118,6 +131,7 @@ def _result(config, device, dtype, target_modules, param_counts, metrics, steps,
         "dtype": dtype,
         "train_runtime_seconds": float(metrics.get("train_runtime", 0.0)),
         "final_loss": float(metrics.get("train_loss", 0.0)),
+        "eval_loss": float(metrics["eval_loss"]) if "eval_loss" in metrics else None,
         "num_examples": int(num_examples),
         "steps": int(steps),
         "trainable_params": int(trainable_params),

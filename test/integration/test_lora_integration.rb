@@ -70,6 +70,22 @@ class TestLoRAIntegration < Minitest::Test
     assert_instance_of String, completion
   end
 
+  def test_lora_train_reports_eval_loss_when_an_eval_dataset_is_given
+    adapter = LLMTune::LoRA.train(
+      model: TINY_MODEL,
+      dataset: @dataset,
+      eval_dataset: @dataset,
+      output_dir: File.join(@workdir, 'eval-adapter'),
+      rank: 2,
+      epochs: 1,
+      batch_size: 2,
+      max_length: 64,
+      device: :cpu
+    )
+
+    assert_kind_of Numeric, adapter.metadata.dig('training', 'eval_loss')
+  end
+
   def test_lora_train_accepts_a_messages_dataset
     dataset = File.join(@workdir, 'chat.jsonl')
     File.write(dataset, [

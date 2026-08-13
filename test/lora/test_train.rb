@@ -139,6 +139,36 @@ class TestLoRATrain < LLMTuneTest
     assert_raises(LLMTune::DatasetError) { train }
   end
 
+  def test_sends_the_eval_dataset_path_when_given
+    eval_file = File.join(@workdir, 'eval.jsonl')
+    File.write(eval_file, %({"text":"User: bye\\nAssistant: goodbye"}\n))
+
+    adapter = train(eval_dataset: eval_file)
+
+    _name, config = @backend.calls.find { |call| call.first == :train_lora }
+
+    assert_equal eval_file, config['eval_dataset_path']
+    assert_in_delta 2.75, adapter.metadata.dig('training', 'eval_loss')
+  end
+
+  def test_omits_the_eval_dataset_path_by_default
+    adapter = train
+
+    _name, config = @backend.calls.find { |call| call.first == :train_lora }
+
+    refute config.key?('eval_dataset_path')
+    assert_nil adapter.metadata.dig('training', 'eval_loss')
+  end
+
+  def test_rejects_an_eval_dataset_in_a_different_format
+    eval_file = File.join(@workdir, 'eval.jsonl')
+    File.write(eval_file, %({"messages":[{"role":"user","content":"hi"}]}\n))
+
+    error = assert_raises(LLMTune::ConfigurationError) { train(eval_dataset: eval_file) }
+
+    assert_match(/eval_dataset format/, error.message)
+  end
+
   def test_trains_from_an_array_of_records
     LLMTune::LoRA.train(
       model: 'fake/model',

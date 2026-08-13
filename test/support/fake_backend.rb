@@ -41,6 +41,7 @@ class FakeBackend
         'dtype' => 'float32',
         'train_runtime_seconds' => 1.5,
         'final_loss' => 2.5,
+        'eval_loss' => config['eval_dataset_path'] ? 2.75 : nil,
         'num_examples' => 4,
         'steps' => 4,
         'trainable_params' => 8192,
