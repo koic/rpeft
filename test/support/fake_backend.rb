@@ -1,0 +1,103 @@
+# frozen_string_literal: true
+
+# Test double for the backend seam (see LLMTune::Backend). Records
+# every call in #calls, returns canned responses that can be
+# overridden per method via responses:, and raises error: when set.
+class FakeBackend
+  attr_reader :calls
+
+  def initialize(responses: {}, error: nil)
+    @responses = responses
+    @error = error
+    @calls = []
+  end
+
+  def self.healthy_diagnostics
+    {
+      'python' => {'executable' => '/usr/bin/python3', 'version' => '3.12.4'},
+      'backend_version' => LLMTune::VERSION,
+      'libraries' => {
+        'torch' => {'installed' => true, 'version' => '2.4.0'},
+        'transformers' => {'installed' => true, 'version' => '4.44.0'},
+        'peft' => {'installed' => true, 'version' => '0.12.0'},
+        'datasets' => {'installed' => true, 'version' => '2.21.0'},
+        'accelerate' => {'installed' => true, 'version' => '0.33.0'}
+      },
+      'device' => {
+        'cuda' => {'available' => false, 'device_name' => nil},
+        'mps' => {'available' => true, 'built' => true},
+        'recommended' => 'mps'
+      }
+    }
+  end
+
+  def train_lora(config)
+    record(:train_lora, config)
+    @responses.fetch(:train_lora) do
+      {
+        'adapter_path' => config['output_dir'],
+        'base_model' => config['base_model'],
+        'device' => config['device'],
+        'dtype' => 'float32',
+        'train_runtime_seconds' => 1.5,
+        'final_loss' => 2.5,
+        'num_examples' => 4,
+        'steps' => 4,
+        'trainable_params' => 8192,
+        'total_params' => 100_000,
+        'effective_config' => effective_config(config)
+      }
+    end
+  end
+
+  def merge_lora(config)
+    record(:merge_lora, config)
+    @responses.fetch(:merge_lora) do
+      {
+        'model_path' => config['output_dir'],
+        'base_model' => config['base_model'] || 'fake/base',
+        'dtype' => 'float32'
+      }
+    end
+  end
+
+  def generate(config)
+    record(:generate, config)
+    @responses.fetch(:generate) do
+      {
+        'completion' => 'fake completion',
+        'model' => config['model'],
+        'device' => config['device'],
+        'new_tokens' => 2
+      }
+    end
+  end
+
+  def detect_device(config = {})
+    record(:detect_device, config)
+    @responses.fetch(:detect_device) do
+      {'device' => 'cpu', 'dtype' => 'float32', 'reason' => 'cpu fallback', 'device_name' => nil}
+    end
+  end
+
+  def diagnostics
+    record(:diagnostics, nil)
+    @responses.fetch(:diagnostics) { self.class.healthy_diagnostics }
+  end
+
+  private
+
+  def record(name, argument)
+    raise @error if @error
+
+    @calls << [name, argument]
+  end
+
+  def effective_config(config)
+    effective = config.dup
+    lora = (config['lora'] || {}).dup
+    lora['target_modules'] ||= %w(q_proj v_proj)
+    effective['lora'] = lora
+    effective
+  end
+end

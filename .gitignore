@@ -6,3 +6,10 @@
 /pkg/
 /spec/reports/
 /tmp/
+/Gemfile.lock
+/.ruby-version
+/.venv/
+/examples/ruby-lora/
+/examples/ruby-model/
+*.gem
+__pycache__/

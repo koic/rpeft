@@ -1,0 +1,40 @@
+{"text":"User: How do I reverse an array?\nAssistant: [1, 2, 3].reverse\n# => [3, 2, 1]"}
+{"text":"User: How do I get the length of a string?\nAssistant: 'hello'.length\n# => 5"}
+{"text":"User: How do I convert a string to uppercase?\nAssistant: 'ruby'.upcase\n# => \"RUBY\""}
+{"text":"User: How do I sum an array of numbers?\nAssistant: [1, 2, 3, 4].sum\n# => 10"}
+{"text":"User: How do I check if an array includes a value?\nAssistant: [1, 2, 3].include?(2)\n# => true"}
+{"text":"User: How do I remove duplicates from an array?\nAssistant: [1, 1, 2, 3, 3].uniq\n# => [1, 2, 3]"}
+{"text":"User: How do I sort an array in descending order?\nAssistant: [3, 1, 2].sort.reverse\n# => [3, 2, 1]"}
+{"text":"User: How do I double every number in an array?\nAssistant: [1, 2, 3].map { |n| n * 2 }\n# => [2, 4, 6]"}
+{"text":"User: How do I select the even numbers from a range?\nAssistant: (1..10).select(&:even?)\n# => [2, 4, 6, 8, 10]"}
+{"text":"User: How do I convert a string to a symbol?\nAssistant: 'name'.to_sym\n# => :name"}
+{"text":"User: How do I merge two hashes?\nAssistant: { a: 1 }.merge(b: 2)\n# => {a: 1, b: 2}"}
+{"text":"User: How do I get the keys of a hash?\nAssistant: { name: 'Ruby', year: 1995 }.keys\n# => [:name, :year]"}
+{"text":"User: How do I check if a hash has a key?\nAssistant: { a: 1 }.key?(:a)\n# => true"}
+{"text":"User: How do I split a string into words?\nAssistant: 'a quick brown fox'.split\n# => [\"a\", \"quick\", \"brown\", \"fox\"]"}
+{"text":"User: How do I join array elements with a comma?\nAssistant: ['a', 'b', 'c'].join(', ')\n# => \"a, b, c\""}
+{"text":"User: How do I find the maximum value in an array?\nAssistant: [3, 7, 2].max\n# => 7"}
+{"text":"User: How do I turn a range into an array?\nAssistant: (1..5).to_a\n# => [1, 2, 3, 4, 5]"}
+{"text":"User: How do I repeat a string three times?\nAssistant: 'ab' * 3\n# => \"ababab\""}
+{"text":"User: How do I check if a string contains a substring?\nAssistant: 'hello world'.include?('world')\n# => true"}
+{"text":"User: How do I strip whitespace from a string?\nAssistant: '  ruby  '.strip\n# => \"ruby\""}
+{"text":"User: How do I convert a string to an integer?\nAssistant: '42'.to_i\n# => 42"}
+{"text":"User: How do I round a float to two decimal places?\nAssistant: 3.14159.round(2)\n# => 3.14"}
+{"text":"User: How do I count how many times each element appears in an array?\nAssistant: ['a', 'b', 'a', 'c', 'a'].tally\n# => {\"a\" => 3, \"b\" => 1, \"c\" => 1}"}
+{"text":"User: How do I group numbers into odd and even?\nAssistant: (1..6).group_by(&:odd?)\n# => {true => [1, 3, 5], false => [2, 4, 6]}"}
+{"text":"User: How do I flatten a nested array?\nAssistant: [[1, 2], [3, [4]]].flatten\n# => [1, 2, 3, 4]"}
+{"text":"User: How do I take the first three elements of a range?\nAssistant: (1..10).first(3)\n# => [1, 2, 3]"}
+{"text":"User: How do I capitalize each word in a string?\nAssistant: 'hello ruby world'.split.map(&:capitalize).join(' ')\n# => \"Hello Ruby World\""}
+{"text":"User: How do I check if a number is even?\nAssistant: 4.even?\n# => true"}
+{"text":"User: How do I define a method with a default argument?\nAssistant: def greet(name = 'world')\n  \"Hello, #{name}!\"\nend\n\ngreet\n# => \"Hello, world!\""}
+{"text":"User: How do I define a class with a constructor?\nAssistant: class Point\n  attr_reader :x, :y\n\n  def initialize(x, y)\n    @x = x\n    @y = y\n  end\nend\n\nPoint.new(1, 2).x\n# => 1"}
+{"text":"User: How do I create a simple value object with Struct?\nAssistant: Pair = Struct.new(:left, :right)\nPair.new(1, 2).right\n# => 2"}
+{"text":"User: How do I rescue an exception and read its message?\nAssistant: begin\n  Integer('abc')\nrescue ArgumentError => e\n  e.message\nend\n# => \"invalid value for Integer(): \\\"abc\\\"\""}
+{"text":"User: How do I sort a hash by its values?\nAssistant: { b: 2, a: 3, c: 1 }.sort_by { |_key, value| value }\n# => [[:c, 1], [:b, 2], [:a, 3]]"}
+{"text":"User: How do I find the index of an element in an array?\nAssistant: ['a', 'b', 'c'].index('b')\n# => 1"}
+{"text":"User: How do I parse a JSON string into a hash?\nAssistant: require 'json'\n\nJSON.parse('{\"lang\":\"Ruby\"}')\n# => {\"lang\" => \"Ruby\"}"}
+{"text":"User: How do I zip two arrays together?\nAssistant: [1, 2, 3].zip(['a', 'b', 'c'])\n# => [[1, \"a\"], [2, \"b\"], [3, \"c\"]]"}
+{"text":"User: How do I split an array into pairs?\nAssistant: (1..6).each_slice(2).to_a\n# => [[1, 2], [3, 4], [5, 6]]"}
+{"text":"User: How do I replace characters in a string?\nAssistant: '2026-08-13'.gsub('-', '/')\n# => \"2026/08/13\""}
+{"text":"User: How do I build an array of squares?\nAssistant: 3.times.map { |i| i * i }\n# => [0, 1, 4]"}
+{"text":"User: How do I multiply all the numbers in an array?\nAssistant: [1, 2, 3, 4].reduce(:*)\n# => 24"}

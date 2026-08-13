@@ -1,0 +1,68 @@
+# frozen_string_literal: true
+
+require 'test_helper'
+
+# Runs a real LoRA fine-tune with a tiny model on CPU. Requires
+# a Python environment with torch/transformers/peft/datasets/accelerate
+# and network access for the first model download (a few MB, cached
+# afterwards):
+#
+#   LLM_TUNE_INTEGRATION=1 bundle exec rake test:integration
+#
+# The model has random weights; this test asserts the mechanics of
+# the train and merge lifecycle, never output quality. The Llama
+# architecture is chosen so that target_modules: nil exercises PEFT's
+# per-architecture auto-detection, the same path real users hit.
+class TestLoRAIntegration < Minitest::Test
+  TINY_MODEL = 'hf-internal-testing/tiny-random-LlamaForCausalLM'
+
+  def setup
+    skip('set LLM_TUNE_INTEGRATION=1 to run integration tests') unless ENV['LLM_TUNE_INTEGRATION'] == '1'
+
+    LLMTune.backend = nil
+    @workdir = Dir.mktmpdir('llm_tune_integration')
+    @dataset = File.join(@workdir, 'train.jsonl')
+    File.write(@dataset, [
+      {text: "Ruby is a programmer's best friend."},
+      {text: 'Matz designed Ruby for developer happiness.'},
+      {text: 'RuboCop keeps Ruby code consistent.'},
+      {text: 'Gems are packaged Ruby libraries.'}
+    ].map(&:to_json).join("\n"))
+  end
+
+  def teardown
+    LLMTune.backend = nil
+    FileUtils.remove_entry(@workdir) if @workdir
+  end
+
+  def test_lora_train_and_merge_produce_loadable_directories
+    adapter = LLMTune::LoRA.train(
+      model: TINY_MODEL,
+      dataset: @dataset,
+      output_dir: File.join(@workdir, 'adapter'),
+      rank: 2,
+      epochs: 1,
+      batch_size: 2,
+      max_length: 64,
+      device: :cpu
+    )
+
+    assert_path_exists File.join(adapter.path, 'adapter_config.json')
+    assert_path_exists File.join(adapter.path, 'adapter_model.safetensors')
+    assert_path_exists File.join(adapter.path, 'llm_tune.json')
+    assert_kind_of Numeric, adapter.metadata.dig('training', 'train_loss')
+    assert_equal 'cpu', adapter.metadata.dig('training', 'device')
+    refute_empty adapter.target_modules
+
+    model = adapter.merge(output_dir: File.join(@workdir, 'merged'))
+
+    assert_path_exists File.join(model.path, 'config.json')
+    assert_path_exists File.join(model.path, 'model.safetensors')
+    assert_path_exists File.join(model.path, 'tokenizer_config.json')
+    refute_empty JSON.parse(File.read(File.join(model.path, 'config.json')))['model_type']
+
+    completion = model.generate('Ruby is', max_new_tokens: 8, device: :cpu)
+
+    assert_instance_of String, completion
+  end
+end
