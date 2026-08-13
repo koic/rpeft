@@ -69,4 +69,26 @@ class TestLoRAIntegration < Minitest::Test
 
     assert_instance_of String, completion
   end
+
+  def test_lora_train_accepts_a_messages_dataset
+    dataset = File.join(@workdir, 'chat.jsonl')
+    File.write(dataset, [
+      {messages: [{role: 'user', content: 'What is Ruby?'}, {role: 'assistant', content: 'A programming language.'}]},
+      {messages: [{role: 'user', content: 'Who made Ruby?'}, {role: 'assistant', content: 'Matz.'}]}
+    ].map(&:to_json).join("\n"))
+
+    adapter = LLMTune::LoRA.train(
+      model: TINY_MODEL,
+      dataset: dataset,
+      output_dir: File.join(@workdir, 'chat-adapter'),
+      rank: 2,
+      epochs: 1,
+      batch_size: 2,
+      max_length: 64,
+      device: :cpu
+    )
+
+    assert_path_exists File.join(adapter.path, 'adapter_model.safetensors')
+    assert_kind_of Numeric, adapter.metadata.dig('training', 'train_loss')
+  end
 end

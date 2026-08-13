@@ -9,6 +9,7 @@
 - Sampling options for text generation (`temperature:`, `top_p:`, `seed:`)
 - Adapter inference without merging (`LLMTune::LoRA::Adapter#generate`, `llm-tune generate --adapter`)
 - Instruction-format datasets (`instruction`/`input`/`output` JSONL lines)
+- Chat-format datasets (`messages` JSONL lines) rendered with the tokenizer's chat template
 - Device auto-detection with CUDA > MPS > CPU priority (`LLMTune.device`)
 - JSONL dataset support (`{"text": "..."}` lines)
 - `llm-tune` CLI: `lora train`, `lora merge`, `doctor`, `version`

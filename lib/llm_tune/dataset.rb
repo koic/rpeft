@@ -7,9 +7,10 @@ module LLMTune
   # A training dataset. `Dataset.coerce` turns any value accepted by the `dataset:` keyword
   # (a path String, a Pathname, or a Dataset) into a validated Dataset.
   #
-  # Two JSONL line formats are accepted and detected from the first line: `{"text": ...}` is
-  # passed through as is, and `{"instruction": ..., "input": ..., "output": ...}` is rendered
-  # into a text prompt, so the backend always consumes text-format JSONL.
+  # Three JSONL line formats are accepted and detected from the first line: `{"text": ...}` is
+  # passed through as is, `{"instruction": ..., "input": ..., "output": ...}` is rendered into
+  # a text prompt, and `{"messages": [{"role": ..., "content": ...}, ...]}` is passed through
+  # for the backend to render with the tokenizer's chat template.
   class Dataset
     def self.coerce(value)
       value.is_a?(Dataset) ? value : new(value)
@@ -20,7 +21,13 @@ module LLMTune
     def initialize(source)
       source_path = existing_file(source)
       @format = detect_format(source_path)
-      @path = @format == :text ? source_path : normalize(source_path)
+      @path = @format == :instruction ? normalize(source_path) : source_path
+    end
+
+    # The format the backend sees. Instruction datasets are normalized to text here,
+    # so only text and messages ever cross the boundary.
+    def backend_format
+      format == :messages ? 'messages' : 'text'
     end
 
     private
@@ -37,9 +44,24 @@ module LLMTune
       if record.is_a?(Hash)
         return :text if record.key?('text')
         return :instruction if record.key?('instruction') && record.key?('output')
+
+        if record.key?('messages')
+          validate_messages(record['messages'], path)
+          return :messages
+        end
       end
 
-      raise DatasetError, "each dataset line must be a JSON object with a \"text\" key or \"instruction\"/\"output\" keys: #{path}"
+      raise DatasetError, "each dataset line must be a JSON object with a \"text\" key, \"instruction\"/\"output\" keys, or a \"messages\" key: #{path}"
+    end
+
+    def validate_messages(messages, path)
+      valid = messages.is_a?(Array) && !messages.empty? && messages.all? { |message|
+        message.is_a?(Hash) && message['role'].is_a?(String) && message['content'].is_a?(String)
+      }
+
+      return if valid
+
+      raise DatasetError, "\"messages\" must be a non-empty array of objects with \"role\" and \"content\" strings: #{path}"
     end
 
     def first_record(path)

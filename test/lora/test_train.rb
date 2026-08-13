@@ -139,6 +139,25 @@ class TestLoRATrain < LLMTuneTest
     assert_raises(LLMTune::DatasetError) { train }
   end
 
+  def test_sends_the_text_dataset_format_by_default
+    train
+
+    _name, config = @backend.calls.find { |call| call.first == :train_lora }
+
+    assert_equal 'text', config['dataset_format']
+  end
+
+  def test_sends_the_messages_dataset_format_and_the_original_file
+    File.write(@dataset, %({"messages":[{"role":"user","content":"hi"}]}\n))
+
+    train
+
+    _name, config = @backend.calls.find { |call| call.first == :train_lora }
+
+    assert_equal 'messages', config['dataset_format']
+    assert_equal @dataset, config['dataset_path']
+  end
+
   def test_trains_from_an_instruction_dataset
     File.write(@dataset, %({"instruction":"Say hi","output":"hi"}\n))
 

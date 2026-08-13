@@ -25,6 +25,7 @@ def train_lora(config):
             tokenizer,
             text_field=config.get("text_field", "text"),
             max_length=config.get("max_length", 512),
+            dataset_format=config.get("dataset_format", "text"),
         )
 
         with stage("training"):

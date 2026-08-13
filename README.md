@@ -185,6 +185,13 @@ Lines with `instruction`/`output` keys (and an optional `input`) are also accept
 {"instruction":"Explain what Array#map does","output":"It returns a new array with the block applied to each element."}
 ```
 
+Chat transcripts are accepted as a `messages` array. These are rendered with the tokenizer's own chat template,
+so the conversation is formatted the way the model expects:
+
+```json
+{"messages":[{"role":"user","content":"How do I reverse an array?"},{"role":"assistant","content":"[1, 2, 3].reverse"}]}
+```
+
 A useful fine-tuning dataset teaches the model something it does not already do. The bundled `examples/ruby_answers.jsonl` teaches the model to answer programming questions with Ruby code only:
 the base model replies with an English paragraph, while the fine-tuned model replies with a bare snippet and a `# =>` comment. The effect is visible at a glance in any spoken language,
 because the difference is the shape of the output rather than its wording. See `examples/train_and_merge.rb` for a runnable example.

@@ -76,6 +76,42 @@ class TestDataset < Minitest::Test
     assert_includes records[1]['text'], "### Input:\n1 and 2"
   end
 
+  def test_detects_the_messages_format_and_passes_the_file_through
+    File.write(@file, %({"messages":[{"role":"user","content":"hi"},{"role":"assistant","content":"hello"}]}\n))
+
+    dataset = LLMTune::Dataset.new(@file)
+
+    assert_equal :messages, dataset.format
+    assert_equal @file, dataset.path
+    assert_equal 'messages', dataset.backend_format
+  end
+
+  def test_reports_text_as_the_backend_format_for_instruction_datasets
+    File.write(@file, %({"instruction":"Say hi","output":"hi"}\n))
+
+    assert_equal 'text', LLMTune::Dataset.new(@file).backend_format
+  end
+
+  def test_rejects_messages_that_are_not_an_array
+    File.write(@file, %({"messages":"hi"}\n))
+
+    error = assert_raises(LLMTune::DatasetError) { LLMTune::Dataset.new(@file) }
+
+    assert_match(/"messages"/, error.message)
+  end
+
+  def test_rejects_messages_without_role_and_content
+    File.write(@file, %({"messages":[{"speaker":"user","text":"hi"}]}\n))
+
+    assert_raises(LLMTune::DatasetError) { LLMTune::Dataset.new(@file) }
+  end
+
+  def test_rejects_an_empty_messages_array
+    File.write(@file, %({"messages":[]}\n))
+
+    assert_raises(LLMTune::DatasetError) { LLMTune::Dataset.new(@file) }
+  end
+
   def test_rejects_an_instruction_line_without_an_output
     File.write(@file, <<~JSONL)
       {"instruction":"Say hi","output":"hi"}

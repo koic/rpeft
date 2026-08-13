@@ -28,18 +28,18 @@ module LLMTune
           max_length: max_length
         }
         validate_options(options)
-        dataset_path = Dataset.coerce(dataset).path
+        training_dataset = Dataset.coerce(dataset)
         resolved_device = Device.resolve(device)
         adapter_dir = prepare_output_dir(output_dir)
 
         result = LLMTune.backend.train_lora(
-          request_payload(model, dataset_path, adapter_dir, resolved_device, options)
+          request_payload(model, training_dataset, adapter_dir, resolved_device, options)
         )
 
         build_adapter(
           adapter_dir: adapter_dir,
           model: model,
-          dataset_path: dataset_path,
+          dataset_path: training_dataset.path,
           device: resolved_device,
           options: options,
           result: result
@@ -85,10 +85,11 @@ module LLMTune
         dir
       end
 
-      def request_payload(model, dataset_path, adapter_dir, device, options)
+      def request_payload(model, dataset, adapter_dir, device, options)
         {
           'base_model' => model,
-          'dataset_path' => dataset_path,
+          'dataset_path' => dataset.path,
+          'dataset_format' => dataset.backend_format,
           'output_dir' => adapter_dir,
           'text_field' => 'text',
           'device' => device.to_s,
