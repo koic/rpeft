@@ -179,6 +179,12 @@ v0.1 supports JSONL files where each line is a JSON object with a `text` key:
 {"text":"User: How do I get the length of a string?\nAssistant: 'hello'.length\n# => 5"}
 ```
 
+Lines with `instruction`/`output` keys (and an optional `input`) are also accepted and rendered into a text prompt automatically:
+
+```json
+{"instruction":"Explain what Array#map does","output":"It returns a new array with the block applied to each element."}
+```
+
 A useful fine-tuning dataset teaches the model something it does not already do. The bundled `examples/ruby_answers.jsonl` teaches the model to answer programming questions with Ruby code only:
 the base model replies with an English paragraph, while the fine-tuned model replies with a bare snippet and a `# =>` comment. The effect is visible at a glance in any spoken language,
 because the difference is the shape of the output rather than its wording. See `examples/train_and_merge.rb` for a runnable example.

@@ -53,4 +53,37 @@ class TestDataset < Minitest::Test
 
     assert_match(/"text"/, error.message)
   end
+
+  def test_detects_the_text_format
+    assert_equal :text, LLMTune::Dataset.new(@file).format
+  end
+
+  def test_renders_an_instruction_dataset_into_text_format
+    File.write(@file, <<~JSONL)
+      {"instruction":"Say hi","output":"hi"}
+      {"instruction":"Add numbers","input":"1 and 2","output":"3"}
+    JSONL
+
+    dataset = LLMTune::Dataset.new(@file)
+
+    assert_equal :instruction, dataset.format
+    refute_equal @file, dataset.path
+
+    records = File.readlines(dataset.path).map { |line| JSON.parse(line) }
+
+    assert_equal 2, records.size
+    assert_equal "### Instruction:\nSay hi\n\n### Response:\nhi", records[0]['text']
+    assert_includes records[1]['text'], "### Input:\n1 and 2"
+  end
+
+  def test_rejects_an_instruction_line_without_an_output
+    File.write(@file, <<~JSONL)
+      {"instruction":"Say hi","output":"hi"}
+      {"instruction":"Broken"}
+    JSONL
+
+    error = assert_raises(LLMTune::DatasetError) { LLMTune::Dataset.new(@file) }
+
+    assert_match(/line 2/, error.message)
+  end
 end

@@ -139,6 +139,18 @@ class TestLoRATrain < LLMTuneTest
     assert_raises(LLMTune::DatasetError) { train }
   end
 
+  def test_trains_from_an_instruction_dataset
+    File.write(@dataset, %({"instruction":"Say hi","output":"hi"}\n))
+
+    train
+
+    _name, config = @backend.calls.find { |call| call.first == :train_lora }
+    first = JSON.parse(File.readlines(config['dataset_path']).first)
+
+    assert_includes first['text'], '### Instruction:'
+    assert_includes first['text'], '### Response:'
+  end
+
   def test_raises_when_the_dataset_lines_lack_a_text_key
     File.write(@dataset, %({"prompt":"hi"}\n))
 
