@@ -40,7 +40,8 @@ def train_lora(config):
         with stage("training"):
             model, target_modules, param_counts = _apply_lora(model, lora)
             trainer = _build_trainer(model, tokenizer, dataset, eval_dataset, config, device, dtype)
-            metrics = trainer.train().metrics
+            resume = config.get("resume_from_checkpoint") or None
+            metrics = trainer.train(resume_from_checkpoint=resume).metrics
             steps = trainer.state.global_step
             if eval_dataset is not None:
                 metrics = dict(metrics, **trainer.evaluate())
@@ -99,7 +100,7 @@ def _build_trainer(model, tokenizer, dataset, eval_dataset, config, device, dtyp
         logging_steps=config.get("logging_steps", 5),
         logging_strategy="steps",
         eval_strategy="epoch" if eval_dataset is not None else "no",
-        save_strategy="no",
+        save_strategy=config.get("save_strategy", "no"),
         report_to=[],
         seed=config.get("seed", 42),
         bf16=(dtype == "bfloat16"),

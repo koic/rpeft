@@ -16,7 +16,7 @@ module LLMTune
     POSITIVE_NUMBER_OPTIONS = %i(alpha learning_rate).freeze
 
     class << self
-      def train(model:, dataset:, eval_dataset: nil, rank: 8, alpha: 16, dropout: 0.05, target_modules: nil, epochs: 3, batch_size: 4, learning_rate: 2e-4, max_length: 512, output_dir: nil, device: :auto)
+      def train(model:, dataset:, eval_dataset: nil, rank: 8, alpha: 16, dropout: 0.05, target_modules: nil, epochs: 3, batch_size: 4, learning_rate: 2e-4, max_length: 512, output_dir: nil, device: :auto, checkpoints: false, resume: false)
         options = {
           rank: rank,
           alpha: alpha,
@@ -25,9 +25,12 @@ module LLMTune
           epochs: epochs,
           batch_size: batch_size,
           learning_rate: learning_rate,
-          max_length: max_length
+          max_length: max_length,
+          checkpoints: checkpoints,
+          resume: resume
         }
         validate_options(options)
+        validate_resume(resume, output_dir)
         training_dataset = Dataset.coerce(dataset)
         evaluation_dataset = coerce_eval_dataset(eval_dataset, training_dataset)
         resolved_device = Device.resolve(device)
@@ -80,6 +83,13 @@ module LLMTune
         raise ConfigurationError, "target_modules must be nil (auto) or a non-empty Array of Strings, got #{target_modules.inspect}"
       end
 
+      # Without an explicit output_dir every run gets a fresh temporary directory, so there would never be a checkpoint of an earlier run to resume from.
+      def validate_resume(resume, output_dir)
+        return if !resume || !output_dir.nil?
+
+        raise ConfigurationError, 'resume: true requires an explicit output_dir: to find the previous checkpoints'
+      end
+
       # The backend tokenizes both datasets the same way, so mixing formats would silently mis-render the evaluation set.
       def coerce_eval_dataset(eval_dataset, training_dataset)
         return nil unless eval_dataset
@@ -112,6 +122,8 @@ module LLMTune
           'logging_steps' => 5,
           'seed' => 42,
           'trust_remote_code' => false,
+          'save_strategy' => options[:checkpoints] ? 'epoch' : 'no',
+          'resume_from_checkpoint' => options[:resume],
           'lora' => {
             'r' => options[:rank],
             'alpha' => options[:alpha],

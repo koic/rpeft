@@ -12,6 +12,7 @@
 - Chat-format datasets (`messages` JSONL lines) rendered with the tokenizer's chat template
 - Enumerable datasets: `dataset:` accepts record Hashes built in Ruby, with no intermediate file
 - Evaluation during training (`eval_dataset:`), with the final `eval_loss` recorded in the adapter metadata
+- Per-epoch checkpoints (`checkpoints:`) and resuming an interrupted run (`resume:`)
 - Device auto-detection with CUDA > MPS > CPU priority (`LLMTune.device`)
 - JSONL dataset support (`{"text": "..."}` lines)
 - `llm-tune` CLI: `lora train`, `lora merge`, `doctor`, `version`

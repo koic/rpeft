@@ -177,6 +177,8 @@ The base model is read from the metadata recorded in the adapter directory, so i
 | `learning_rate:`  | `2e-4`  | Learning rate                                                                           |
 | `max_length:`     | `512`   | Max token length per example                                                            |
 | `eval_dataset:`   | `nil`   | Held-out dataset, in the same format as `dataset:`. Enables per-epoch evaluation        |
+| `checkpoints:`    | `false` | Save a checkpoint after every epoch, so a long run can be resumed                       |
+| `resume:`         | `false` | Resume from the last checkpoint in `output_dir`, which must be given explicitly         |
 | `output_dir:`     | `nil`   | Adapter output directory. `nil` uses a temporary directory; `save` moves it             |
 | `device:`         | `:auto` | `:auto`, `:cuda`, `:mps`, or `:cpu`                                                     |
 
@@ -296,7 +298,7 @@ llm_tune is designed for CLI, Rake tasks, batch jobs, and offline experiments. I
 
 - PyCall embeds a single Python interpreter in the Ruby process. Backend calls hold the Python GIL and block the calling Ruby thread for the whole training run.
 - Do not fork the process after the backend has been initialized (Spring, Puma workers, and so on). The backend loads lazily, so forking before the first call is safe.
-- Training keeps no checkpoints in v0.1 (`save_strategy: "no"`), so a crash during training loses that run's progress.
+- Training keeps no checkpoints unless `checkpoints: true` is passed, so by default a crash during training loses that run's progress.
 
 ## Development
 

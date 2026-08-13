@@ -139,6 +139,40 @@ class TestLoRATrain < LLMTuneTest
     assert_raises(LLMTune::DatasetError) { train }
   end
 
+  def test_disables_checkpoints_by_default
+    train
+
+    _name, config = @backend.calls.find { |call| call.first == :train_lora }
+
+    assert_equal 'no', config['save_strategy']
+    refute config['resume_from_checkpoint']
+  end
+
+  def test_saves_a_checkpoint_per_epoch_when_asked
+    train(checkpoints: true)
+
+    _name, config = @backend.calls.find { |call| call.first == :train_lora }
+
+    assert_equal 'epoch', config['save_strategy']
+  end
+
+  def test_requests_a_resume_when_asked
+    train(checkpoints: true, resume: true)
+
+    _name, config = @backend.calls.find { |call| call.first == :train_lora }
+
+    assert config['resume_from_checkpoint']
+  end
+
+  def test_rejects_resume_without_an_explicit_output_dir
+    error = assert_raises(LLMTune::ConfigurationError) {
+      LLMTune::LoRA.train(model: 'fake/model', dataset: @dataset, resume: true)
+    }
+
+    assert_match(/output_dir/, error.message)
+    assert_empty @backend.calls
+  end
+
   def test_sends_the_eval_dataset_path_when_given
     eval_file = File.join(@workdir, 'eval.jsonl')
     File.write(eval_file, %({"text":"User: bye\\nAssistant: goodbye"}\n))
