@@ -28,7 +28,7 @@ module LLMTune
           max_length: max_length
         }
         validate_options(options)
-        dataset_path = validate_dataset(dataset)
+        dataset_path = Dataset.coerce(dataset).path
         resolved_device = Device.resolve(device)
         adapter_dir = prepare_output_dir(output_dir)
 
@@ -76,26 +76,6 @@ module LLMTune
         return if target_modules.is_a?(Array) && !target_modules.empty? && target_modules.all?(String)
 
         raise ConfigurationError, "target_modules must be nil (auto) or a non-empty Array of Strings, got #{target_modules.inspect}"
-      end
-
-      def validate_dataset(dataset)
-        path = File.expand_path(dataset)
-        raise DatasetError, "dataset file not found: #{path}" unless File.file?(path)
-
-        first_line = File.foreach(path).find { |line| !line.strip.empty? }
-        raise DatasetError, "dataset is empty: #{path}" unless first_line
-
-        validate_dataset_line(first_line, path)
-        path
-      end
-
-      def validate_dataset_line(line, path)
-        record = JSON.parse(line)
-        return if record.is_a?(Hash) && record.key?('text')
-
-        raise DatasetError, %(each dataset line must be a JSON object with a "text" key: #{path})
-      rescue JSON::ParserError => e
-        raise DatasetError, "dataset is not JSONL (#{e.message}): #{path}"
       end
 
       def prepare_output_dir(output_dir)
