@@ -1,0 +1,52 @@
+name: Integration
+
+# Runs a real fine-tune with a tiny model on CPU. Kept out of the main CI workflow
+# because it installs PyTorch and downloads a model from the Hugging Face Hub,
+# which is far slower and less reliable than the unit tests.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 15 * * 0"
+
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "4.0"
+          bundler-cache: true
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      # setup-python's own `cache: pip` keys off a requirements.txt or pyproject.toml,
+      # which this repository deliberately does not have: the weekly run installs
+      # the latest packages so that it acts as a canary for upstream breakage.
+      - name: Cache pip downloads
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}
+      - name: Cache Hugging Face models
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/huggingface
+          key: huggingface-${{ runner.os }}
+      - name: Install the Python backend dependencies
+        run: |
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install transformers peft datasets accelerate
+      # LD_LIBRARY_PATH is where PyCall looks for the shared libpython that
+      # setup-python installs outside the system library paths.
+      - name: Report the environment
+        run: bundle exec exe/llm-tune doctor
+        env:
+          PYTHON: ${{ env.pythonLocation }}/bin/python
+          LD_LIBRARY_PATH: ${{ env.pythonLocation }}/lib
+      - name: Run the integration tests
+        run: bundle exec rake test:integration
+        env:
+          LLM_TUNE_INTEGRATION: "1"
+          PYTHON: ${{ env.pythonLocation }}/bin/python
+          LD_LIBRARY_PATH: ${{ env.pythonLocation }}/lib

@@ -311,6 +311,8 @@ An integration test runs a real fine-tune with a tiny model on CPU. It needs a p
 $ LLM_TUNE_INTEGRATION=1 bundle exec rake test:integration
 ```
 
+The same tests run weekly on CI, and on demand through the Integration workflow.
+
 ## Contributing
 
 Bug reports and pull requests are welcome on GitHub at https://github.com/koic/llm_tune.
