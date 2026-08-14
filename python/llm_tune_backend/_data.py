@@ -1,3 +1,4 @@
+from . import _chat
 from ._errors import BackendError, stage
 
 
@@ -16,7 +17,7 @@ def load_tokenized_dataset(path, tokenizer, text_field, max_length, dataset_form
 
         def tokenize(batch):
             if dataset_format == "messages":
-                texts = [_render_chat(tokenizer, messages) for messages in batch[field]]
+                texts = [_chat.render(tokenizer, messages) for messages in batch[field]]
             else:
                 texts = batch[field]
 
@@ -24,12 +25,3 @@ def load_tokenized_dataset(path, tokenizer, text_field, max_length, dataset_form
             return tokenizer(texts, truncation=True, max_length=max_length)
 
         return dataset.map(tokenize, batched=True, remove_columns=dataset.column_names)
-
-
-def _render_chat(tokenizer, messages):
-    if getattr(tokenizer, "chat_template", None):
-        return tokenizer.apply_chat_template(messages, tokenize=False)
-
-    # Tokenizers without a chat template (small test models, some base models) still need
-    # a deterministic rendering.
-    return "\n".join("%s: %s" % (message["role"], message["content"]) for message in messages)

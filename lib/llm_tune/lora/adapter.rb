@@ -101,9 +101,7 @@ module LLMTune
       # Generates with the adapter applied on top of the base model, without merging.
       # Useful for verifying an adapter before producing a merged model.
       def generate(prompt, max_new_tokens: 64, device: :auto, temperature: nil, top_p: nil, seed: nil)
-        unless base_model
-          raise GenerationError, 'base model is unknown; pass base_model: to Adapter.load (or --model to the CLI)'
-        end
+        require_base_model
 
         Generation.run(
           model: base_model,
@@ -115,6 +113,31 @@ module LLMTune
           top_p: top_p,
           seed: seed
         )
+      end
+
+      # Continues a chat transcript with the adapter applied on top of the base model.
+      def chat(messages, max_new_tokens: 64, device: :auto, temperature: nil, top_p: nil, seed: nil)
+        require_base_model
+
+        Generation.run(
+          model: base_model,
+          messages: messages,
+          adapter_path: path,
+          max_new_tokens: max_new_tokens,
+          device: device,
+          temperature: temperature,
+          top_p: top_p,
+          seed: seed
+        )
+      end
+
+      private
+
+      # An adapter is a delta against specific base weights, so it cannot be applied without knowing which model it belongs to.
+      def require_base_model
+        return if base_model
+
+        raise GenerationError, 'base model is unknown; pass base_model: to Adapter.load (or --model to the CLI)'
       end
     end
   end

@@ -1,6 +1,6 @@
 import gc
 
-from . import _device, _models
+from . import _chat, _device, _models
 from ._errors import stage
 
 
@@ -47,7 +47,13 @@ def generate(config):
                 generation_options["top_p"] = float(config["top_p"])
                 generation_options["do_sample"] = True
 
-            inputs = tokenizer(config["prompt"], return_tensors="pt").to(device)
+            messages = config.get("messages")
+            if messages:
+                prompt = _chat.render(tokenizer, messages, add_generation_prompt=True)
+            else:
+                prompt = config["prompt"]
+
+            inputs = tokenizer(prompt, return_tensors="pt").to(device)
             with torch.no_grad():
                 output_ids = model.generate(**inputs, **generation_options)
             completion_ids = output_ids[0][inputs["input_ids"].shape[1]:]

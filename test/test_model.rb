@@ -130,6 +130,55 @@ class TestModel < LLMTuneTest
     assert_raises(LLMTune::ConfigurationError) { model.generate('User: hi', top_p: 1.5) }
   end
 
+  def test_chat_returns_the_completion_from_the_backend
+    model = LLMTune::Model.new(path: @model_dir)
+
+    assert_equal 'fake completion', model.chat([{role: 'user', content: 'hi'}])
+  end
+
+  def test_chat_sends_messages_instead_of_a_prompt
+    messages = [{role: 'user', content: 'hi'}]
+
+    LLMTune::Model.new(path: @model_dir).chat(messages, max_new_tokens: 8, device: :cpu)
+
+    name, config = @backend.calls.last
+
+    assert_equal :generate, name
+    assert_equal messages, config['messages']
+    refute config.key?('prompt')
+    assert_equal 8, config['max_new_tokens']
+    assert_equal 'cpu', config['device']
+  end
+
+  def test_chat_accepts_string_keyed_messages
+    LLMTune::Model.new(path: @model_dir).chat([{'role' => 'user', 'content' => 'hi'}])
+
+    _name, config = @backend.calls.last
+
+    assert_equal 'user', config.dig('messages', 0, 'role')
+  end
+
+  def test_chat_rejects_messages_that_are_not_an_array
+    model = LLMTune::Model.new(path: @model_dir)
+
+    assert_raises(LLMTune::ConfigurationError) do
+      model.chat('hi')
+    end
+    assert_empty @backend.calls
+  end
+
+  def test_chat_rejects_messages_without_role_and_content
+    model = LLMTune::Model.new(path: @model_dir)
+
+    assert_raises(LLMTune::ConfigurationError) { model.chat([{speaker: 'user', text: 'hi'}]) }
+  end
+
+  def test_chat_rejects_an_empty_transcript
+    model = LLMTune::Model.new(path: @model_dir)
+
+    assert_raises(LLMTune::ConfigurationError) { model.chat([]) }
+  end
+
   def test_generate_rejects_a_non_integer_seed
     model = LLMTune::Model.new(path: @model_dir)
 

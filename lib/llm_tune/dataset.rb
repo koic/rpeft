@@ -77,11 +77,7 @@ module LLMTune
     end
 
     def validate_messages(messages, path)
-      valid = messages.is_a?(Array) && !messages.empty? && messages.all? { |message|
-        message.is_a?(Hash) && message['role'].is_a?(String) && message['content'].is_a?(String)
-      }
-
-      return if valid
+      return if Messages.valid?(messages)
 
       raise DatasetError, "\"messages\" must be a non-empty array of objects with \"role\" and \"content\" strings: #{path}"
     end

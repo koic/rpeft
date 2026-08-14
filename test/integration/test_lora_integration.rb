@@ -106,5 +106,10 @@ class TestLoRAIntegration < Minitest::Test
 
     assert_path_exists File.join(adapter.path, 'adapter_model.safetensors')
     assert_kind_of Numeric, adapter.metadata.dig('training', 'train_loss')
+
+    # The tiny model has no chat template, so this covers the fallback rendering.
+    reply = adapter.chat([{role: 'user', content: 'What is Ruby?'}], max_new_tokens: 8, device: :cpu)
+
+    assert_instance_of String, reply
   end
 end

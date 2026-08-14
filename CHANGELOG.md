@@ -10,6 +10,7 @@
 - Adapter inference without merging (`LLMTune::LoRA::Adapter#generate`, `llm-tune generate --adapter`)
 - Instruction-format datasets (`instruction`/`input`/`output` JSONL lines)
 - Chat-format datasets (`messages` JSONL lines) rendered with the tokenizer's chat template
+- Chat inference (`LLMTune::Model#chat`, `LLMTune::LoRA::Adapter#chat`) applying the model's chat template
 - Enumerable datasets: `dataset:` accepts record Hashes built in Ruby, with no intermediate file
 - Evaluation during training (`eval_dataset:`), with the final `eval_loss` recorded in the adapter metadata
 - Per-epoch checkpoints (`checkpoints:`) and resuming an interrupted run (`resume:`)

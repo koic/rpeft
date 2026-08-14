@@ -137,6 +137,27 @@ class TestLoRAAdapter < LLMTuneTest
     assert_equal @adapter_dir, config['adapter_path']
   end
 
+  def test_chat_applies_the_adapter_to_the_transcript
+    messages = [{role: 'user', content: 'hi'}]
+
+    assert_equal 'fake completion', new_adapter.chat(messages)
+
+    _name, config = @backend.calls.last
+
+    assert_equal 'fake/model', config['model']
+    assert_equal @adapter_dir, config['adapter_path']
+    assert_equal messages, config['messages']
+  end
+
+  def test_chat_without_a_base_model_raises
+    adapter = LLMTune::LoRA::Adapter.new(path: @adapter_dir, base_model: nil)
+
+    assert_raises(LLMTune::GenerationError) do
+      adapter.chat([{role: 'user', content: 'hi'}])
+    end
+    assert_empty @backend.calls
+  end
+
   def test_generate_without_a_base_model_raises
     adapter = LLMTune::LoRA::Adapter.new(path: @adapter_dir, base_model: nil)
 

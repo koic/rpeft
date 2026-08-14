@@ -164,6 +164,27 @@ adapter.generate(prompt, max_new_tokens: 64) # the same output, no merged model 
 
 The base model is read from the metadata recorded in the adapter directory, so it does not have to be given again.
 
+`#chat` takes a transcript instead of a prompt and renders it with the model's own chat template, including the marker
+that tells the model where its turn begins. Pass the whole transcript on every call to continue a conversation:
+
+```ruby
+chat_model = LLMTune::Model.new(path: 'Qwen/Qwen2.5-Coder-0.5B-Instruct')
+
+chat_model.chat([
+  { role: 'user', content: 'How do I reverse an array in Ruby?' },
+  { role: 'assistant', content: '[1, 2, 3].reverse' },
+  { role: 'user', content: 'And the last element?' }
+])
+# => "The last element of the array is `3`."
+```
+
+`LLMTune::LoRA::Adapter#chat` does the same with the adapter applied on top of its base model.
+
+Reach for `#chat` when the model understands a chat template: an instruction-tuned model, or one fine-tuned on
+chat-format data. A base model is a different matter. `Qwen/Qwen2.5-Coder-0.5B`, for instance, ships a chat template
+but was never instruction-tuned, so prompting it in chat form produces poor output while `#generate` with a plain prompt works well.
+The rule is the same one that governs the dataset formats: **the prompt at inference should look like the text the model was trained on.**
+
 ### Options
 
 | Option            | Default | Meaning                                                                                 |

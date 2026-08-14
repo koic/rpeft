@@ -32,5 +32,20 @@ module LLMTune
         seed: seed
       )
     end
+
+    # Continues a chat transcript and returns the assistant's reply. The transcript is
+    # rendered with the model's own chat template, which is what a model fine-tuned on
+    # chat-format data expects to see.
+    def chat(messages, max_new_tokens: 64, device: :auto, temperature: nil, top_p: nil, seed: nil)
+      Generation.run(
+        model: path,
+        messages: messages,
+        max_new_tokens: max_new_tokens,
+        device: device,
+        temperature: temperature,
+        top_p: top_p,
+        seed: seed
+      )
+    end
   end
 end
