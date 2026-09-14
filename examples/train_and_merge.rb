@@ -9,19 +9,19 @@
 #
 #   bundle exec ruby examples/train_and_merge.rb
 
-require 'llm_tune'
+require 'grain'
 
 BASE_MODEL = 'Qwen/Qwen2.5-Coder-0.5B'
 PROMPT = "User: How do I reverse an array?\nAssistant:"
 
-puts "Device: #{LLMTune.device}"
+puts "Device: #{Grain.device}"
 
 puts
 puts '--- Before (base model) ---'
-base = LLMTune::Model.new(path: BASE_MODEL)
+base = Grain::Model.new(path: BASE_MODEL)
 puts base.generate(PROMPT, max_new_tokens: 60)
 
-adapter = LLMTune::LoRA.train(
+adapter = Grain::LoRA.train(
   model: BASE_MODEL,
   dataset: File.expand_path('ruby_answers.jsonl', __dir__),
   rank: 8, # The LoRA rank r in W' = W + B A.

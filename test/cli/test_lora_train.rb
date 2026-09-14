@@ -2,10 +2,10 @@
 
 require 'test_helper'
 
-class TestCLILoraTrain < LLMTuneTest
+class TestCLILoraTrain < GrainTest
   def setup
     super
-    @workdir = Dir.mktmpdir('llm_tune_test')
+    @workdir = Dir.mktmpdir('grain_test')
     @dataset = File.join(@workdir, 'train.jsonl')
     File.write(@dataset, %({"text":"User: hi\\nAssistant: hello"}\n))
   end
@@ -53,7 +53,7 @@ class TestCLILoraTrain < LLMTuneTest
   end
 
   def test_reports_backend_errors_with_exit_status_one
-    LLMTune.backend = FakeBackend.new(error: LLMTune::TrainingError.new('loss exploded'))
+    Grain.backend = FakeBackend.new(error: Grain::TrainingError.new('loss exploded'))
 
     status, _out, err = run_cli(['lora', 'train', '--model', 'm', '--dataset', @dataset,
                                  '--output', File.join(@workdir, 'adapter')])

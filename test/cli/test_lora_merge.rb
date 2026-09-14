@@ -2,10 +2,10 @@
 
 require 'test_helper'
 
-class TestCLILoraMerge < LLMTuneTest
+class TestCLILoraMerge < GrainTest
   def setup
     super
-    @workdir = Dir.mktmpdir('llm_tune_test')
+    @workdir = Dir.mktmpdir('grain_test')
     @adapter_dir = File.join(@workdir, 'adapter')
     @merged_dir = File.join(@workdir, 'merged')
     FileUtils.mkdir_p(@adapter_dir)
@@ -67,6 +67,6 @@ class TestCLILoraMerge < LLMTuneTest
       'base_model' => base_model,
       'lora' => {'rank' => 8}
     }
-    File.write(File.join(@adapter_dir, 'llm_tune.json'), JSON.generate(metadata))
+    File.write(File.join(@adapter_dir, 'grain.json'), JSON.generate(metadata))
   end
 end

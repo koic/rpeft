@@ -2,10 +2,10 @@
 
 require 'test_helper'
 
-class TestLoRATrain < LLMTuneTest
+class TestLoRATrain < GrainTest
   def setup
     super
-    @workdir = Dir.mktmpdir('llm_tune_test')
+    @workdir = Dir.mktmpdir('grain_test')
     @dataset = File.join(@workdir, 'train.jsonl')
     File.write(@dataset, %({"text":"User: hi\\nAssistant: hello"}\n))
   end
@@ -18,7 +18,7 @@ class TestLoRATrain < LLMTuneTest
   def test_returns_an_adapter_with_the_lora_configuration
     adapter = train(rank: 4, alpha: 8)
 
-    assert_instance_of LLMTune::LoRA::Adapter, adapter
+    assert_instance_of Grain::LoRA::Adapter, adapter
     assert_equal 'fake/model', adapter.base_model
     assert_equal 4, adapter.rank
     assert_equal 8, adapter.alpha
@@ -66,10 +66,10 @@ class TestLoRATrain < LLMTuneTest
     assert_equal %w(q_proj v_proj), adapter.target_modules
   end
 
-  def test_writes_llm_tune_metadata_into_the_adapter_directory
+  def test_writes_grain_metadata_into_the_adapter_directory
     adapter = train(epochs: 2)
 
-    metadata = JSON.parse(File.read(File.join(adapter.path, 'llm_tune.json')))
+    metadata = JSON.parse(File.read(File.join(adapter.path, 'grain.json')))
 
     assert_equal 1, metadata['schema_version']
     assert_equal 'lora_adapter', metadata['kind']
@@ -82,45 +82,45 @@ class TestLoRATrain < LLMTuneTest
   end
 
   def test_creates_a_temporary_output_directory_by_default
-    adapter = LLMTune::LoRA.train(model: 'fake/model', dataset: @dataset)
+    adapter = Grain::LoRA.train(model: 'fake/model', dataset: @dataset)
 
     assert File.directory?(adapter.path)
-    assert_path_exists File.join(adapter.path, 'llm_tune.json')
+    assert_path_exists File.join(adapter.path, 'grain.json')
   ensure
     FileUtils.remove_entry(adapter.path) if adapter
   end
 
   def test_rejects_a_non_positive_rank
-    error = assert_raises(LLMTune::ConfigurationError) { train(rank: 0) }
+    error = assert_raises(Grain::ConfigurationError) { train(rank: 0) }
 
     assert_match(/rank/, error.message)
   end
 
   def test_rejects_a_non_integer_rank
-    assert_raises(LLMTune::ConfigurationError) { train(rank: '8') }
+    assert_raises(Grain::ConfigurationError) { train(rank: '8') }
   end
 
   def test_rejects_an_out_of_range_dropout
-    assert_raises(LLMTune::ConfigurationError) { train(dropout: 1.5) }
+    assert_raises(Grain::ConfigurationError) { train(dropout: 1.5) }
   end
 
   def test_rejects_a_non_array_target_modules
-    assert_raises(LLMTune::ConfigurationError) { train(target_modules: 'q_proj') }
+    assert_raises(Grain::ConfigurationError) { train(target_modules: 'q_proj') }
   end
 
   def test_rejects_a_non_positive_epochs
-    assert_raises(LLMTune::ConfigurationError) { train(epochs: 0) }
+    assert_raises(Grain::ConfigurationError) { train(epochs: 0) }
   end
 
   def test_rejects_an_unknown_device
-    error = assert_raises(LLMTune::ConfigurationError) { train(device: :tpu) }
+    error = assert_raises(Grain::ConfigurationError) { train(device: :tpu) }
 
     assert_match(/device/, error.message)
   end
 
   def test_raises_when_the_dataset_file_is_missing
-    error = assert_raises(LLMTune::DatasetError) {
-      LLMTune::LoRA.train(model: 'fake/model', dataset: File.join(@workdir, 'none.jsonl'))
+    error = assert_raises(Grain::DatasetError) {
+      Grain::LoRA.train(model: 'fake/model', dataset: File.join(@workdir, 'none.jsonl'))
     }
 
     assert_match(/not found/, error.message)
@@ -130,13 +130,13 @@ class TestLoRATrain < LLMTuneTest
   def test_raises_when_the_dataset_is_empty
     File.write(@dataset, "\n")
 
-    assert_raises(LLMTune::DatasetError) { train }
+    assert_raises(Grain::DatasetError) { train }
   end
 
   def test_raises_when_the_dataset_is_not_jsonl
     File.write(@dataset, "plain text\n")
 
-    assert_raises(LLMTune::DatasetError) { train }
+    assert_raises(Grain::DatasetError) { train }
   end
 
   def test_disables_checkpoints_by_default
@@ -165,8 +165,8 @@ class TestLoRATrain < LLMTuneTest
   end
 
   def test_rejects_resume_without_an_explicit_output_dir
-    error = assert_raises(LLMTune::ConfigurationError) {
-      LLMTune::LoRA.train(model: 'fake/model', dataset: @dataset, resume: true)
+    error = assert_raises(Grain::ConfigurationError) {
+      Grain::LoRA.train(model: 'fake/model', dataset: @dataset, resume: true)
     }
 
     assert_match(/output_dir/, error.message)
@@ -198,13 +198,13 @@ class TestLoRATrain < LLMTuneTest
     eval_file = File.join(@workdir, 'eval.jsonl')
     File.write(eval_file, %({"messages":[{"role":"user","content":"hi"}]}\n))
 
-    error = assert_raises(LLMTune::ConfigurationError) { train(eval_dataset: eval_file) }
+    error = assert_raises(Grain::ConfigurationError) { train(eval_dataset: eval_file) }
 
     assert_match(/eval_dataset format/, error.message)
   end
 
   def test_trains_from_an_array_of_records
-    LLMTune::LoRA.train(
+    Grain::LoRA.train(
       model: 'fake/model',
       dataset: [{text: 'from memory'}],
       output_dir: File.join(@workdir, 'adapter')
@@ -249,7 +249,7 @@ class TestLoRATrain < LLMTuneTest
   def test_raises_when_the_dataset_lines_lack_a_text_key
     File.write(@dataset, %({"prompt":"hi"}\n))
 
-    error = assert_raises(LLMTune::DatasetError) { train }
+    error = assert_raises(Grain::DatasetError) { train }
 
     assert_match(/"text"/, error.message)
   end
@@ -257,7 +257,8 @@ class TestLoRATrain < LLMTuneTest
   private
 
   def train(**options)
-    LLMTune::LoRA.train(model: 'fake/model', dataset: @dataset,
-                        output_dir: File.join(@workdir, 'adapter'), **options)
+    Grain::LoRA.train(
+      model: 'fake/model', dataset: @dataset, output_dir: File.join(@workdir, 'adapter'), **options
+    )
   end
 end

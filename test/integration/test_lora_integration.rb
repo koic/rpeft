@@ -7,7 +7,7 @@ require 'test_helper'
 # and network access for the first model download (a few MB, cached
 # afterwards):
 #
-#   LLM_TUNE_INTEGRATION=1 bundle exec rake test:integration
+#   GRAIN_INTEGRATION=1 bundle exec rake test:integration
 #
 # The model has random weights; this test asserts the mechanics of
 # the train and merge lifecycle, never output quality. The Llama
@@ -17,10 +17,10 @@ class TestLoRAIntegration < Minitest::Test
   TINY_MODEL = 'hf-internal-testing/tiny-random-LlamaForCausalLM'
 
   def setup
-    skip('set LLM_TUNE_INTEGRATION=1 to run integration tests') unless ENV['LLM_TUNE_INTEGRATION'] == '1'
+    skip('set GRAIN_INTEGRATION=1 to run integration tests') unless ENV['GRAIN_INTEGRATION'] == '1'
 
-    LLMTune.backend = nil
-    @workdir = Dir.mktmpdir('llm_tune_integration')
+    Grain.backend = nil
+    @workdir = Dir.mktmpdir('grain_integration')
     @dataset = File.join(@workdir, 'train.jsonl')
     File.write(@dataset, [
       {text: "Ruby is a programmer's best friend."},
@@ -31,12 +31,12 @@ class TestLoRAIntegration < Minitest::Test
   end
 
   def teardown
-    LLMTune.backend = nil
+    Grain.backend = nil
     FileUtils.remove_entry(@workdir) if @workdir
   end
 
   def test_lora_train_and_merge_produce_loadable_directories
-    adapter = LLMTune::LoRA.train(
+    adapter = Grain::LoRA.train(
       model: TINY_MODEL,
       dataset: @dataset,
       output_dir: File.join(@workdir, 'adapter'),
@@ -49,7 +49,7 @@ class TestLoRAIntegration < Minitest::Test
 
     assert_path_exists File.join(adapter.path, 'adapter_config.json')
     assert_path_exists File.join(adapter.path, 'adapter_model.safetensors')
-    assert_path_exists File.join(adapter.path, 'llm_tune.json')
+    assert_path_exists File.join(adapter.path, 'grain.json')
     assert_kind_of Numeric, adapter.metadata.dig('training', 'train_loss')
     assert_equal 'cpu', adapter.metadata.dig('training', 'device')
     refute_empty adapter.target_modules
@@ -71,7 +71,7 @@ class TestLoRAIntegration < Minitest::Test
   end
 
   def test_lora_train_reports_eval_loss_when_an_eval_dataset_is_given
-    adapter = LLMTune::LoRA.train(
+    adapter = Grain::LoRA.train(
       model: TINY_MODEL,
       dataset: @dataset,
       eval_dataset: @dataset,
@@ -93,7 +93,7 @@ class TestLoRAIntegration < Minitest::Test
       {messages: [{role: 'user', content: 'Who made Ruby?'}, {role: 'assistant', content: 'Matz.'}]}
     ].map(&:to_json).join("\n"))
 
-    adapter = LLMTune::LoRA.train(
+    adapter = Grain::LoRA.train(
       model: TINY_MODEL,
       dataset: dataset,
       output_dir: File.join(@workdir, 'chat-adapter'),

@@ -2,10 +2,10 @@
 
 require 'test_helper'
 
-class TestLoRAAdapter < LLMTuneTest
+class TestLoRAAdapter < GrainTest
   def setup
     super
-    @workdir = Dir.mktmpdir('llm_tune_test')
+    @workdir = Dir.mktmpdir('grain_test')
     @adapter_dir = File.join(@workdir, 'adapter')
     FileUtils.mkdir_p(@adapter_dir)
   end
@@ -15,10 +15,10 @@ class TestLoRAAdapter < LLMTuneTest
     super
   end
 
-  def test_load_reads_llm_tune_metadata
+  def test_load_reads_grain_metadata
     write_metadata
 
-    adapter = LLMTune::LoRA::Adapter.load(@adapter_dir)
+    adapter = Grain::LoRA::Adapter.load(@adapter_dir)
 
     assert_equal 'meta/base', adapter.base_model
     assert_equal 8, adapter.rank
@@ -31,7 +31,7 @@ class TestLoRAAdapter < LLMTuneTest
   def test_load_prefers_an_explicit_base_model
     write_metadata
 
-    adapter = LLMTune::LoRA::Adapter.load(@adapter_dir, base_model: 'override/base')
+    adapter = Grain::LoRA::Adapter.load(@adapter_dir, base_model: 'override/base')
 
     assert_equal 'override/base', adapter.base_model
   end
@@ -44,7 +44,7 @@ class TestLoRAAdapter < LLMTuneTest
     }
     File.write(File.join(@adapter_dir, 'adapter_config.json'), JSON.generate(peft_config))
 
-    adapter = LLMTune::LoRA::Adapter.load(@adapter_dir)
+    adapter = Grain::LoRA::Adapter.load(@adapter_dir)
 
     assert_equal 'peft/base', adapter.base_model
     assert_equal 4, adapter.rank
@@ -54,7 +54,7 @@ class TestLoRAAdapter < LLMTuneTest
   end
 
   def test_load_raises_for_a_directory_without_adapter_files
-    error = assert_raises(LLMTune::ModelLoadError) { LLMTune::LoRA::Adapter.load(@adapter_dir) }
+    error = assert_raises(Grain::ModelLoadError) { Grain::LoRA::Adapter.load(@adapter_dir) }
 
     assert_match(/not a LoRA adapter directory/, error.message)
   end
@@ -74,7 +74,7 @@ class TestLoRAAdapter < LLMTuneTest
     dest = File.join(@workdir, 'existing')
     FileUtils.mkdir_p(dest)
 
-    error = assert_raises(LLMTune::Error) { new_adapter.save(dest) }
+    error = assert_raises(Grain::Error) { new_adapter.save(dest) }
 
     assert_match(/already exists/, error.message)
   end
@@ -83,7 +83,7 @@ class TestLoRAAdapter < LLMTuneTest
     File.write(File.join(@adapter_dir, 'dummy'), 'new')
     dest = File.join(@workdir, 'saved')
     FileUtils.mkdir_p(dest)
-    File.write(File.join(dest, 'llm_tune.json'), '{}')
+    File.write(File.join(dest, 'grain.json'), '{}')
     File.write(File.join(dest, 'stale'), 'old')
 
     new_adapter.save(dest)
@@ -97,7 +97,7 @@ class TestLoRAAdapter < LLMTuneTest
 
     model = new_adapter.merge(output_dir: merged_dir)
 
-    assert_instance_of LLMTune::Model, model
+    assert_instance_of Grain::Model, model
     assert_equal merged_dir, model.path
     assert_equal 'fake/model', model.base_model
 
@@ -117,9 +117,9 @@ class TestLoRAAdapter < LLMTuneTest
   end
 
   def test_merge_without_a_base_model_raises
-    adapter = LLMTune::LoRA::Adapter.new(path: @adapter_dir, base_model: nil)
+    adapter = Grain::LoRA::Adapter.new(path: @adapter_dir, base_model: nil)
 
-    assert_raises(LLMTune::MergeError) do
+    assert_raises(Grain::MergeError) do
       adapter.merge
     end
     assert_empty @backend.calls
@@ -150,18 +150,18 @@ class TestLoRAAdapter < LLMTuneTest
   end
 
   def test_chat_without_a_base_model_raises
-    adapter = LLMTune::LoRA::Adapter.new(path: @adapter_dir, base_model: nil)
+    adapter = Grain::LoRA::Adapter.new(path: @adapter_dir, base_model: nil)
 
-    assert_raises(LLMTune::GenerationError) do
+    assert_raises(Grain::GenerationError) do
       adapter.chat([{role: 'user', content: 'hi'}])
     end
     assert_empty @backend.calls
   end
 
   def test_generate_without_a_base_model_raises
-    adapter = LLMTune::LoRA::Adapter.new(path: @adapter_dir, base_model: nil)
+    adapter = Grain::LoRA::Adapter.new(path: @adapter_dir, base_model: nil)
 
-    assert_raises(LLMTune::GenerationError) do
+    assert_raises(Grain::GenerationError) do
       adapter.generate('User: hi')
     end
     assert_empty @backend.calls
@@ -170,7 +170,7 @@ class TestLoRAAdapter < LLMTuneTest
   private
 
   def new_adapter
-    LLMTune::LoRA::Adapter.new(path: @adapter_dir, base_model: 'fake/model', rank: 8)
+    Grain::LoRA::Adapter.new(path: @adapter_dir, base_model: 'fake/model', rank: 8)
   end
 
   def write_metadata
@@ -182,6 +182,6 @@ class TestLoRAAdapter < LLMTuneTest
                  'target_modules' => %w(q_proj v_proj)},
       'training' => {'train_loss' => 1.23}
     }
-    File.write(File.join(@adapter_dir, 'llm_tune.json'), JSON.generate(metadata))
+    File.write(File.join(@adapter_dir, 'grain.json'), JSON.generate(metadata))
   end
 end

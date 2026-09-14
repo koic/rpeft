@@ -2,10 +2,10 @@
 
 require 'test_helper'
 
-class TestModel < LLMTuneTest
+class TestModel < GrainTest
   def setup
     super
-    @workdir = Dir.mktmpdir('llm_tune_test')
+    @workdir = Dir.mktmpdir('grain_test')
     @model_dir = File.join(@workdir, 'model')
     FileUtils.mkdir_p(@model_dir)
     File.write(File.join(@model_dir, 'config.json'), '{}')
@@ -17,14 +17,14 @@ class TestModel < LLMTuneTest
   end
 
   def test_exposes_its_path_and_base_model
-    model = LLMTune::Model.new(path: @model_dir, base_model: 'fake/model')
+    model = Grain::Model.new(path: @model_dir, base_model: 'fake/model')
 
     assert_equal @model_dir, model.path
     assert_equal 'fake/model', model.base_model
   end
 
   def test_save_moves_the_model_directory
-    model = LLMTune::Model.new(path: @model_dir)
+    model = Grain::Model.new(path: @model_dir)
     dest = File.join(@workdir, 'moved')
 
     assert_same model, model.save(dest)
@@ -36,9 +36,9 @@ class TestModel < LLMTuneTest
   def test_save_refuses_to_overwrite_an_unrelated_existing_directory
     dest = File.join(@workdir, 'existing')
     FileUtils.mkdir_p(dest)
-    model = LLMTune::Model.new(path: @model_dir)
+    model = Grain::Model.new(path: @model_dir)
 
-    assert_raises(LLMTune::Error) { model.save(dest) }
+    assert_raises(Grain::Error) { model.save(dest) }
   end
 
   def test_save_replaces_a_previously_saved_model
@@ -46,7 +46,7 @@ class TestModel < LLMTuneTest
     FileUtils.mkdir_p(dest)
     File.write(File.join(dest, 'config.json'), '{}')
     File.write(File.join(dest, 'stale'), 'old')
-    model = LLMTune::Model.new(path: @model_dir)
+    model = Grain::Model.new(path: @model_dir)
 
     model.save(dest)
 
@@ -55,19 +55,19 @@ class TestModel < LLMTuneTest
   end
 
   def test_keeps_a_hub_model_id_verbatim
-    model = LLMTune::Model.new(path: 'Qwen/Qwen2.5-Coder-0.5B')
+    model = Grain::Model.new(path: 'Qwen/Qwen2.5-Coder-0.5B')
 
     assert_equal 'Qwen/Qwen2.5-Coder-0.5B', model.path
   end
 
   def test_generate_returns_the_completion_from_the_backend
-    model = LLMTune::Model.new(path: @model_dir)
+    model = Grain::Model.new(path: @model_dir)
 
     assert_equal 'fake completion', model.generate('User: hi')
   end
 
   def test_generate_sends_the_generation_configuration_to_the_backend
-    LLMTune::Model.new(path: @model_dir).generate('User: hi', max_new_tokens: 8)
+    Grain::Model.new(path: @model_dir).generate('User: hi', max_new_tokens: 8)
 
     name, config = @backend.calls.last
 
@@ -79,7 +79,7 @@ class TestModel < LLMTuneTest
   end
 
   def test_generate_passes_an_explicit_device_through_without_detection
-    LLMTune::Model.new(path: @model_dir).generate('User: hi', device: :mps)
+    Grain::Model.new(path: @model_dir).generate('User: hi', device: :mps)
 
     refute(@backend.calls.any? { |call| call.first == :detect_device })
     _name, config = @backend.calls.last
@@ -87,19 +87,19 @@ class TestModel < LLMTuneTest
   end
 
   def test_generate_rejects_a_non_positive_max_new_tokens
-    model = LLMTune::Model.new(path: @model_dir)
+    model = Grain::Model.new(path: @model_dir)
 
-    assert_raises(LLMTune::ConfigurationError) { model.generate('User: hi', max_new_tokens: 0) }
+    assert_raises(Grain::ConfigurationError) { model.generate('User: hi', max_new_tokens: 0) }
   end
 
   def test_generate_rejects_an_unknown_device
-    model = LLMTune::Model.new(path: @model_dir)
+    model = Grain::Model.new(path: @model_dir)
 
-    assert_raises(LLMTune::ConfigurationError) { model.generate('User: hi', device: :tpu) }
+    assert_raises(Grain::ConfigurationError) { model.generate('User: hi', device: :tpu) }
   end
 
   def test_generate_passes_sampling_options_when_given
-    LLMTune::Model.new(path: @model_dir).generate('User: hi', temperature: 0.7, top_p: 0.9, seed: 42)
+    Grain::Model.new(path: @model_dir).generate('User: hi', temperature: 0.7, top_p: 0.9, seed: 42)
 
     _name, config = @backend.calls.last
 
@@ -109,7 +109,7 @@ class TestModel < LLMTuneTest
   end
 
   def test_generate_omits_sampling_options_by_default
-    LLMTune::Model.new(path: @model_dir).generate('User: hi')
+    Grain::Model.new(path: @model_dir).generate('User: hi')
 
     _name, config = @backend.calls.last
 
@@ -119,19 +119,19 @@ class TestModel < LLMTuneTest
   end
 
   def test_generate_rejects_a_non_positive_temperature
-    model = LLMTune::Model.new(path: @model_dir)
+    model = Grain::Model.new(path: @model_dir)
 
-    assert_raises(LLMTune::ConfigurationError) { model.generate('User: hi', temperature: 0) }
+    assert_raises(Grain::ConfigurationError) { model.generate('User: hi', temperature: 0) }
   end
 
   def test_generate_rejects_an_out_of_range_top_p
-    model = LLMTune::Model.new(path: @model_dir)
+    model = Grain::Model.new(path: @model_dir)
 
-    assert_raises(LLMTune::ConfigurationError) { model.generate('User: hi', top_p: 1.5) }
+    assert_raises(Grain::ConfigurationError) { model.generate('User: hi', top_p: 1.5) }
   end
 
   def test_chat_returns_the_completion_from_the_backend
-    model = LLMTune::Model.new(path: @model_dir)
+    model = Grain::Model.new(path: @model_dir)
 
     assert_equal 'fake completion', model.chat([{role: 'user', content: 'hi'}])
   end
@@ -139,7 +139,7 @@ class TestModel < LLMTuneTest
   def test_chat_sends_messages_instead_of_a_prompt
     messages = [{role: 'user', content: 'hi'}]
 
-    LLMTune::Model.new(path: @model_dir).chat(messages, max_new_tokens: 8, device: :cpu)
+    Grain::Model.new(path: @model_dir).chat(messages, max_new_tokens: 8, device: :cpu)
 
     name, config = @backend.calls.last
 
@@ -151,7 +151,7 @@ class TestModel < LLMTuneTest
   end
 
   def test_chat_accepts_string_keyed_messages
-    LLMTune::Model.new(path: @model_dir).chat([{'role' => 'user', 'content' => 'hi'}])
+    Grain::Model.new(path: @model_dir).chat([{'role' => 'user', 'content' => 'hi'}])
 
     _name, config = @backend.calls.last
 
@@ -159,29 +159,29 @@ class TestModel < LLMTuneTest
   end
 
   def test_chat_rejects_messages_that_are_not_an_array
-    model = LLMTune::Model.new(path: @model_dir)
+    model = Grain::Model.new(path: @model_dir)
 
-    assert_raises(LLMTune::ConfigurationError) do
+    assert_raises(Grain::ConfigurationError) do
       model.chat('hi')
     end
     assert_empty @backend.calls
   end
 
   def test_chat_rejects_messages_without_role_and_content
-    model = LLMTune::Model.new(path: @model_dir)
+    model = Grain::Model.new(path: @model_dir)
 
-    assert_raises(LLMTune::ConfigurationError) { model.chat([{speaker: 'user', text: 'hi'}]) }
+    assert_raises(Grain::ConfigurationError) { model.chat([{speaker: 'user', text: 'hi'}]) }
   end
 
   def test_chat_rejects_an_empty_transcript
-    model = LLMTune::Model.new(path: @model_dir)
+    model = Grain::Model.new(path: @model_dir)
 
-    assert_raises(LLMTune::ConfigurationError) { model.chat([]) }
+    assert_raises(Grain::ConfigurationError) { model.chat([]) }
   end
 
   def test_generate_rejects_a_non_integer_seed
-    model = LLMTune::Model.new(path: @model_dir)
+    model = Grain::Model.new(path: @model_dir)
 
-    assert_raises(LLMTune::ConfigurationError) { model.generate('User: hi', seed: 'x') }
+    assert_raises(Grain::ConfigurationError) { model.generate('User: hi', seed: 'x') }
   end
 end

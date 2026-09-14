@@ -2,26 +2,26 @@
 
 require 'test_helper'
 
-class TestCLI < LLMTuneTest
+class TestCLI < GrainTest
   def test_prints_usage_without_arguments
     status, out, = run_cli([])
 
     assert_equal 0, status
-    assert_includes out, 'Usage: llm-tune'
+    assert_includes out, 'Usage: grain'
   end
 
   def test_prints_usage_for_help
     status, out, = run_cli(['help'])
 
     assert_equal 0, status
-    assert_includes out, 'Usage: llm-tune'
+    assert_includes out, 'Usage: grain'
   end
 
   def test_prints_the_version
     status, out, = run_cli(['version'])
 
     assert_equal 0, status
-    assert_equal "#{LLMTune::VERSION}\n", out
+    assert_equal "#{Grain::VERSION}\n", out
   end
 
   def test_rejects_an_unknown_command

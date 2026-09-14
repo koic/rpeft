@@ -1,11 +1,11 @@
 # frozen_string_literal: true
 
 require 'test_helper'
-require 'llm_tune/backend/python'
+require 'grain/backend/python'
 
 class TestPythonBackend < Minitest::Test
   def setup
-    @workdir = Dir.mktmpdir('llm_tune_test')
+    @workdir = Dir.mktmpdir('grain_test')
   end
 
   def teardown
@@ -16,22 +16,22 @@ class TestPythonBackend < Minitest::Test
     python = fake_venv_python(with_pyvenv_cfg: true)
     expected = File.join(@workdir, 'venv', 'lib', 'python3.12', 'site-packages')
 
-    assert_equal expected, LLMTune::Backend::Python.venv_site_packages(python)
+    assert_equal expected, Grain::Backend::Python.venv_site_packages(python)
   end
 
   def test_venv_site_packages_returns_nil_without_pyvenv_cfg
     python = fake_venv_python(with_pyvenv_cfg: false)
 
-    assert_nil LLMTune::Backend::Python.venv_site_packages(python)
+    assert_nil Grain::Backend::Python.venv_site_packages(python)
   end
 
   def test_venv_site_packages_returns_nil_for_nil_path
-    assert_nil LLMTune::Backend::Python.venv_site_packages(nil)
+    assert_nil Grain::Backend::Python.venv_site_packages(nil)
   end
 
   def test_default_python_prefers_the_python_environment_variable
     with_env('PYTHON' => '/opt/custom/python') do
-      assert_equal '/opt/custom/python', LLMTune::Backend::Python.default_python
+      assert_equal '/opt/custom/python', Grain::Backend::Python.default_python
     end
   end
 
@@ -44,7 +44,7 @@ class TestPythonBackend < Minitest::Test
       Dir.chdir(@workdir) do
         expected = File.expand_path('.venv/bin/python', Dir.pwd)
 
-        assert_equal expected, LLMTune::Backend::Python.default_python
+        assert_equal expected, Grain::Backend::Python.default_python
       end
     end
   end
@@ -52,7 +52,7 @@ class TestPythonBackend < Minitest::Test
   def test_default_python_returns_nil_without_a_venv_or_environment_variable
     with_env('PYTHON' => nil) do
       Dir.chdir(@workdir) do
-        assert_nil LLMTune::Backend::Python.default_python
+        assert_nil Grain::Backend::Python.default_python
       end
     end
   end

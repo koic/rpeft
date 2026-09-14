@@ -4,7 +4,7 @@ require 'test_helper'
 
 class TestDataset < Minitest::Test
   def setup
-    @workdir = Dir.mktmpdir('llm_tune_test')
+    @workdir = Dir.mktmpdir('grain_test')
     @file = File.join(@workdir, 'train.jsonl')
     File.write(@file, %({"text":"User: hi\\nAssistant: hello"}\n))
   end
@@ -14,20 +14,20 @@ class TestDataset < Minitest::Test
   end
 
   def test_coerce_wraps_a_path_string
-    dataset = LLMTune::Dataset.coerce(@file)
+    dataset = Grain::Dataset.coerce(@file)
 
-    assert_instance_of LLMTune::Dataset, dataset
+    assert_instance_of Grain::Dataset, dataset
     assert_equal @file, dataset.path
   end
 
   def test_coerce_passes_a_dataset_through
-    dataset = LLMTune::Dataset.new(@file)
+    dataset = Grain::Dataset.new(@file)
 
-    assert_same dataset, LLMTune::Dataset.coerce(dataset)
+    assert_same dataset, Grain::Dataset.coerce(dataset)
   end
 
   def test_coerce_builds_a_dataset_from_records
-    dataset = LLMTune::Dataset.coerce([{text: 'first'}, {text: 'second'}])
+    dataset = Grain::Dataset.coerce([{text: 'first'}, {text: 'second'}])
 
     assert_equal :text, dataset.format
 
@@ -37,7 +37,7 @@ class TestDataset < Minitest::Test
   end
 
   def test_from_records_accepts_messages_with_symbol_keys
-    dataset = LLMTune::Dataset.from_records([{messages: [{role: 'user', content: 'hi'}]}])
+    dataset = Grain::Dataset.from_records([{messages: [{role: 'user', content: 'hi'}]}])
 
     assert_equal :messages, dataset.format
 
@@ -47,27 +47,27 @@ class TestDataset < Minitest::Test
   end
 
   def test_from_records_renders_instruction_records
-    dataset = LLMTune::Dataset.from_records([{instruction: 'Say hi', output: 'hi'}])
+    dataset = Grain::Dataset.from_records([{instruction: 'Say hi', output: 'hi'}])
 
     assert_equal :instruction, dataset.format
     assert_includes JSON.parse(File.readlines(dataset.path).first)['text'], '### Instruction:'
   end
 
   def test_from_records_rejects_a_non_hash_record
-    error = assert_raises(LLMTune::DatasetError) { LLMTune::Dataset.from_records(['just a string']) }
+    error = assert_raises(Grain::DatasetError) { Grain::Dataset.from_records(['just a string']) }
 
     assert_match(/must be a Hash/, error.message)
   end
 
   def test_from_records_rejects_an_empty_enumerable
-    error = assert_raises(LLMTune::DatasetError) { LLMTune::Dataset.from_records([]) }
+    error = assert_raises(Grain::DatasetError) { Grain::Dataset.from_records([]) }
 
     assert_match(/no records/, error.message)
   end
 
   def test_rejects_a_missing_file
-    error = assert_raises(LLMTune::DatasetError) {
-      LLMTune::Dataset.new(File.join(@workdir, 'none.jsonl'))
+    error = assert_raises(Grain::DatasetError) {
+      Grain::Dataset.new(File.join(@workdir, 'none.jsonl'))
     }
 
     assert_match(/not found/, error.message)
@@ -76,25 +76,25 @@ class TestDataset < Minitest::Test
   def test_rejects_an_empty_file
     File.write(@file, "\n")
 
-    assert_raises(LLMTune::DatasetError) { LLMTune::Dataset.new(@file) }
+    assert_raises(Grain::DatasetError) { Grain::Dataset.new(@file) }
   end
 
   def test_rejects_a_non_jsonl_file
     File.write(@file, "plain text\n")
 
-    assert_raises(LLMTune::DatasetError) { LLMTune::Dataset.new(@file) }
+    assert_raises(Grain::DatasetError) { Grain::Dataset.new(@file) }
   end
 
   def test_rejects_lines_without_a_text_key
     File.write(@file, %({"prompt":"hi"}\n))
 
-    error = assert_raises(LLMTune::DatasetError) { LLMTune::Dataset.new(@file) }
+    error = assert_raises(Grain::DatasetError) { Grain::Dataset.new(@file) }
 
     assert_match(/"text"/, error.message)
   end
 
   def test_detects_the_text_format
-    assert_equal :text, LLMTune::Dataset.new(@file).format
+    assert_equal :text, Grain::Dataset.new(@file).format
   end
 
   def test_renders_an_instruction_dataset_into_text_format
@@ -103,7 +103,7 @@ class TestDataset < Minitest::Test
       {"instruction":"Add numbers","input":"1 and 2","output":"3"}
     JSONL
 
-    dataset = LLMTune::Dataset.new(@file)
+    dataset = Grain::Dataset.new(@file)
 
     assert_equal :instruction, dataset.format
     refute_equal @file, dataset.path
@@ -118,7 +118,7 @@ class TestDataset < Minitest::Test
   def test_detects_the_messages_format_and_passes_the_file_through
     File.write(@file, %({"messages":[{"role":"user","content":"hi"},{"role":"assistant","content":"hello"}]}\n))
 
-    dataset = LLMTune::Dataset.new(@file)
+    dataset = Grain::Dataset.new(@file)
 
     assert_equal :messages, dataset.format
     assert_equal @file, dataset.path
@@ -128,13 +128,13 @@ class TestDataset < Minitest::Test
   def test_reports_text_as_the_backend_format_for_instruction_datasets
     File.write(@file, %({"instruction":"Say hi","output":"hi"}\n))
 
-    assert_equal 'text', LLMTune::Dataset.new(@file).backend_format
+    assert_equal 'text', Grain::Dataset.new(@file).backend_format
   end
 
   def test_rejects_messages_that_are_not_an_array
     File.write(@file, %({"messages":"hi"}\n))
 
-    error = assert_raises(LLMTune::DatasetError) { LLMTune::Dataset.new(@file) }
+    error = assert_raises(Grain::DatasetError) { Grain::Dataset.new(@file) }
 
     assert_match(/"messages"/, error.message)
   end
@@ -142,13 +142,13 @@ class TestDataset < Minitest::Test
   def test_rejects_messages_without_role_and_content
     File.write(@file, %({"messages":[{"speaker":"user","text":"hi"}]}\n))
 
-    assert_raises(LLMTune::DatasetError) { LLMTune::Dataset.new(@file) }
+    assert_raises(Grain::DatasetError) { Grain::Dataset.new(@file) }
   end
 
   def test_rejects_an_empty_messages_array
     File.write(@file, %({"messages":[]}\n))
 
-    assert_raises(LLMTune::DatasetError) { LLMTune::Dataset.new(@file) }
+    assert_raises(Grain::DatasetError) { Grain::Dataset.new(@file) }
   end
 
   def test_rejects_an_instruction_line_without_an_output
@@ -157,7 +157,7 @@ class TestDataset < Minitest::Test
       {"instruction":"Broken"}
     JSONL
 
-    error = assert_raises(LLMTune::DatasetError) { LLMTune::Dataset.new(@file) }
+    error = assert_raises(Grain::DatasetError) { Grain::Dataset.new(@file) }
 
     assert_match(/line 2/, error.message)
   end

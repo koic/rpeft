@@ -8,7 +8,7 @@ on:
 
 jobs:
   # Unit tests never load PyCall or Python, so a green run also proves
-  # that `require "llm_tune"` works without a Python environment.
+  # that `require "grain"` works without a Python environment.
   test:
     runs-on: ubuntu-latest
     strategy:

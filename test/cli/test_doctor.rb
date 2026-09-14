@@ -2,7 +2,7 @@
 
 require 'test_helper'
 
-class TestCLIDoctor < LLMTuneTest
+class TestCLIDoctor < GrainTest
   def test_reports_a_healthy_environment
     status, out, = run_cli(['doctor'])
 
@@ -16,7 +16,7 @@ class TestCLIDoctor < LLMTuneTest
   def test_reports_missing_python_packages
     diagnostics = FakeBackend.healthy_diagnostics
     diagnostics['libraries']['peft'] = {'installed' => false, 'version' => nil}
-    LLMTune.backend = FakeBackend.new(responses: {diagnostics: diagnostics})
+    Grain.backend = FakeBackend.new(responses: {diagnostics: diagnostics})
 
     status, out, = run_cli(['doctor'])
 
@@ -27,8 +27,8 @@ class TestCLIDoctor < LLMTuneTest
   end
 
   def test_reports_an_unusable_backend
-    LLMTune.backend = FakeBackend.new(
-      error: LLMTune::DependencyError.new('Python interpreter not found')
+    Grain.backend = FakeBackend.new(
+      error: Grain::DependencyError.new('Python interpreter not found')
     )
 
     status, out, = run_cli(['doctor'])

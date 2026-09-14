@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-# Test double for the backend seam (see LLMTune::Backend). Records
+# Test double for the backend seam (see Grain::Backend). Records
 # every call in #calls, returns canned responses that can be
 # overridden per method via responses:, and raises error: when set.
 class FakeBackend
@@ -15,7 +15,7 @@ class FakeBackend
   def self.healthy_diagnostics
     {
       'python' => {'executable' => '/usr/bin/python3', 'version' => '3.12.4'},
-      'backend_version' => LLMTune::VERSION,
+      'backend_version' => Grain::VERSION,
       'libraries' => {
         'torch' => {'installed' => true, 'version' => '2.4.0'},
         'transformers' => {'installed' => true, 'version' => '4.44.0'},

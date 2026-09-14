@@ -2,10 +2,10 @@
 
 require 'test_helper'
 
-class TestCLIGenerate < LLMTuneTest
+class TestCLIGenerate < GrainTest
   def setup
     super
-    @workdir = Dir.mktmpdir('llm_tune_test')
+    @workdir = Dir.mktmpdir('grain_test')
   end
 
   def teardown
@@ -33,7 +33,7 @@ class TestCLIGenerate < LLMTuneTest
     adapter_dir = File.join(@workdir, 'adapter')
     FileUtils.mkdir_p(adapter_dir)
     metadata = {'kind' => 'lora_adapter', 'base_model' => 'meta/base', 'lora' => {'rank' => 8}}
-    File.write(File.join(adapter_dir, 'llm_tune.json'), JSON.generate(metadata))
+    File.write(File.join(adapter_dir, 'grain.json'), JSON.generate(metadata))
 
     status, out, = run_cli(['generate', '--adapter', adapter_dir, '--prompt', 'User: hi', '--device', 'cpu'])
 
@@ -74,7 +74,7 @@ class TestCLIGenerate < LLMTuneTest
   end
 
   def test_reports_backend_errors_with_exit_status_one
-    LLMTune.backend = FakeBackend.new(error: LLMTune::GenerationError.new('generation failed'))
+    Grain.backend = FakeBackend.new(error: Grain::GenerationError.new('generation failed'))
 
     status, _out, err = run_cli(['generate', '--model', 'fake/model', '--prompt', 'User: hi'])
 

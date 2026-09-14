@@ -1,16 +1,16 @@
-# LLM Tune
+# Grain
 
-LLM Tune is a Ruby gem for LoRA fine-tuning of large language models. It provides a Ruby API and CLI that model the LoRA lifecycle,
+Grain is a Ruby gem for LoRA fine-tuning of large language models. It provides a Ruby API and CLI that model the LoRA lifecycle,
 while the heavy lifting is done by the Python ecosystem (PyTorch, Hugging Face Transformers, PEFT, Datasets, Accelerate) through PyCall.
 
 ```text
 Ruby application / CLI
         |
         v
-     llm_tune
+     grain
         |
         v
-      PyCall
+     PyCall
         |
         v
 Python backend (bundled, private)
@@ -23,7 +23,7 @@ Python backend (bundled, private)
 CUDA / MPS / CPU
 ```
 
-llm_tune does not reimplement Transformers or LoRA in Ruby, and it does not hide what fine-tuning is. It hides Python plumbing, not concepts.
+grain does not reimplement Transformers or LoRA in Ruby, and it does not hide what fine-tuning is. It hides Python plumbing, not concepts.
 
 ## Status
 
@@ -59,7 +59,7 @@ The `rank:` option in the API is exactly the `r` above.
 - Ruby 3.0+
 - Python 3.9+ with a shared libpython (static Python builds such as pyenv's default do not work; tested with Python 3.12)
 - Ruby and Python built for the same CPU architecture. On Apple Silicon, an x86_64 Ruby running under Rosetta cannot load an arm64 libpython;
-  a symbol error such as `_Py_NoneStruct` from `llm-tune doctor` usually means this mismatch
+  a symbol error such as `_Py_NoneStruct` from `grain doctor` usually means this mismatch
 - The Python packages `torch`, `transformers`, `peft`, `datasets`, and `accelerate`
 
 ## Installation
@@ -67,7 +67,7 @@ The `rank:` option in the API is exactly the `r` above.
 Add the gem to your Gemfile:
 
 ```console
-$ bundle add llm_tune
+$ bundle add grain
 ```
 
 Set up a Python environment. With venv:
@@ -90,21 +90,21 @@ Note for pyenv users: PyCall needs a shared libpython, so install the interprete
 $ PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install 3.12
 ```
 
-When a `.venv` directory exists in the current directory, llm_tune uses it automatically. Set the `PYTHON` environment variable to override the interpreter,
+When a `.venv` directory exists in the current directory, grain uses it automatically. Set the `PYTHON` environment variable to override the interpreter,
 then check the environment:
 
 ```console
-$ bundle exec llm-tune doctor
+$ bundle exec grain doctor
 ```
 
-`llm-tune doctor` reports the Python interpreter, each required package, and the available devices, and tells you what is missing.
+`grain doctor` reports the Python interpreter, each required package, and the available devices, and tells you what is missing.
 
 ## Usage
 
 ```ruby
-require 'llm_tune'
+require 'grain'
 
-adapter = LLMTune::LoRA.train(
+adapter = Grain::LoRA.train(
   model: 'Qwen/Qwen2.5-Coder-0.5B',
   dataset: 'ruby_answers.jsonl',
   rank: 8, # The LoRA rank r
@@ -122,24 +122,24 @@ Passing `eval_dataset:` holds a second dataset out of training and evaluates aga
 The final validation loss lands in the adapter metadata, which is how you tell learning apart from memorizing:
 
 ```ruby
-adapter = LLMTune::LoRA.train(model: ..., dataset: 'train.jsonl', eval_dataset: 'validation.jsonl')
+adapter = Grain::LoRA.train(model: ..., dataset: 'train.jsonl', eval_dataset: 'validation.jsonl')
 adapter.metadata.dig('training', 'train_loss') # => 0.74
 adapter.metadata.dig('training', 'eval_loss')  # => 0.91
 ```
 
-`LLMTune::LoRA.train` returns an `LLMTune::LoRA::Adapter` that knows its `path`, `base_model`, `rank`, `alpha`, `dropout`, `target_modules`, and training `metadata`.
-`adapter.merge` returns an `LLMTune::Model` with `path` and `base_model`. `save` moves the artifact to the given path; a destination produced by a previous `save` is replaced,
+`Grain::LoRA.train` returns an `Grain::LoRA::Adapter` that knows its `path`, `base_model`, `rank`, `alpha`, `dropout`, `target_modules`, and training `metadata`.
+`adapter.merge` returns an `Grain::Model` with `path` and `base_model`. `save` moves the artifact to the given path; a destination produced by a previous `save` is replaced,
 so scripts can be re-run, while any other existing path is refused.
 
 ### Generation
 
-`LLMTune::Model#generate` produces a completion for a prompt. It uses greedy decoding, so the output is deterministic for a given model and prompt.
+`Grain::Model#generate` produces a completion for a prompt. It uses greedy decoding, so the output is deterministic for a given model and prompt.
 The model can be a merged model directory or a Hugging Face model id, which makes a before and after comparison one call each:
 
 ```ruby
 prompt = "User: How do I reverse an array?\nAssistant:"
 
-base = LLMTune::Model.new(path: 'Qwen/Qwen2.5-Coder-0.5B')
+base = Grain::Model.new(path: 'Qwen/Qwen2.5-Coder-0.5B')
 base.generate(prompt, max_new_tokens: 64)  # English prose from the base model
 
 model = adapter.merge
@@ -153,12 +153,12 @@ different wording on each call. `seed:` makes sampled output reproducible again:
 model.generate(prompt, temperature: 0.7, top_p: 0.9, seed: 42)
 ```
 
-`LLMTune::LoRA::Adapter#generate` runs the same generation with the adapter applied on top of its base model, without merging.
+`Grain::LoRA::Adapter#generate` runs the same generation with the adapter applied on top of its base model, without merging.
 Since an adapter is a few MB against roughly a gigabyte for a merged model, this is the cheap way to try an adapter,
 including one received from someone else:
 
 ```ruby
-adapter = LLMTune::LoRA::Adapter.load('./ruby-lora')
+adapter = Grain::LoRA::Adapter.load('./ruby-lora')
 adapter.generate(prompt, max_new_tokens: 64) # the same output, no merged model needed
 ```
 
@@ -168,7 +168,7 @@ The base model is read from the metadata recorded in the adapter directory, so i
 that tells the model where its turn begins. Pass the whole transcript on every call to continue a conversation:
 
 ```ruby
-chat_model = LLMTune::Model.new(path: 'Qwen/Qwen2.5-Coder-0.5B-Instruct')
+chat_model = Grain::Model.new(path: 'Qwen/Qwen2.5-Coder-0.5B-Instruct')
 
 chat_model.chat([
   { role: 'user', content: 'How do I reverse an array in Ruby?' },
@@ -178,7 +178,7 @@ chat_model.chat([
 # => "The last element of the array is `3`."
 ```
 
-`LLMTune::LoRA::Adapter#chat` does the same with the adapter applied on top of its base model.
+`Grain::LoRA::Adapter#chat` does the same with the adapter applied on top of its base model.
 
 Reach for `#chat` when the model understands a chat template: an instruction-tuned model, or one fine-tuned on
 chat-format data. A base model is a different matter. `Qwen/Qwen2.5-Coder-0.5B`, for instance, ships a chat template
@@ -228,7 +228,7 @@ so the conversation is formatted the way the model expects:
 `dataset:` also accepts any Enumerable of record Hashes in the same three shapes, so data built in Ruby needs no file of its own:
 
 ```ruby
-LLMTune::LoRA.train(
+Grain::LoRA.train(
   model: 'Qwen/Qwen2.5-Coder-0.5B',
   dataset: Article.published.map { |article| { text: article.body } }
 )
@@ -243,7 +243,7 @@ because the difference is the shape of the output rather than its wording. See `
 The device is auto-detected with CUDA > MPS > CPU priority:
 
 ```ruby
-LLMTune.device # => :mps
+Grain.device # => :mps
 ```
 
 MacBook Pro (Apple Silicon, M1 and later) is a first-class target: small models such as `Qwen/Qwen2.5-Coder-0.5B` fine-tune on MPS.
@@ -253,12 +253,12 @@ operators MPS does not implement. Merging always runs on CPU, which is the memor
 ### Environment check
 
 ```ruby
-LLMTune.check # => a Hash describing Python, packages, and devices
+Grain.check # => a Hash describing Python, packages, and devices
 ```
 
 ```console
-$ llm-tune doctor
-Ruby:         3.3.4 (llm_tune 0.1.0)
+$ grain doctor
+Ruby:         3.3.4 (grain 0.1.0)
 Python:       3.12.4 (/path/to/.venv/bin/python)
 torch:        OK 2.4.0
 transformers: OK 4.44.0
@@ -271,15 +271,15 @@ Status:       OK
 
 ### Errors
 
-Python exceptions never surface raw. They are translated into `LLMTune::DependencyError`, `LLMTune::ModelLoadError`, `LLMTune::DatasetError`, `LLMTune::TrainingError`,
-or `LLMTune::MergeError`, and the original Python error (with its traceback) stays reachable via `error.cause`.
+Python exceptions never surface raw. They are translated into `Grain::DependencyError`, `Grain::ModelLoadError`, `Grain::DatasetError`, `Grain::TrainingError`,
+or `Grain::MergeError`, and the original Python error (with its traceback) stays reachable via `error.cause`.
 
 ## CLI
 
 The CLI mirrors the Ruby API:
 
 ```console
-$ llm-tune lora train \
+$ grain lora train \
     --model Qwen/Qwen2.5-Coder-0.5B \
     --dataset ruby_answers.jsonl \
     --rank 8 \
@@ -288,7 +288,7 @@ $ llm-tune lora train \
 ```
 
 ```console
-$ llm-tune lora merge \
+$ grain lora merge \
     --adapter ruby-lora \
     --output ruby-model
 ```
@@ -296,7 +296,7 @@ $ llm-tune lora merge \
 `lora merge` reads the base model from the metadata recorded in the adapter directory; pass `--model` to override it (for example, for adapters produced by plain PEFT).
 
 ```console
-$ llm-tune generate \
+$ grain generate \
     --model ruby-model \
     --prompt $'User: How do I reverse an array?\nAssistant:'
 ```
@@ -306,16 +306,16 @@ $ llm-tune generate \
 Passing `--adapter` instead generates with the adapter applied on top of its base model, without merging:
 
 ```console
-$ llm-tune generate \
+$ grain generate \
     --adapter ruby-lora \
     --prompt $'User: How do I reverse an array?\nAssistant:'
 ```
 
-`llm-tune doctor` and `llm-tune version` are also available.
+`grain doctor` and `grain version` are also available.
 
 ## Process model and limitations
 
-llm_tune is designed for CLI, Rake tasks, batch jobs, and offline experiments. It is not designed to run inside web application workers:
+grain is designed for CLI, Rake tasks, batch jobs, and offline experiments. It is not designed to run inside web application workers:
 
 - PyCall embeds a single Python interpreter in the Ruby process. Backend calls hold the Python GIL and block the calling Ruby thread for the whole training run.
 - Do not fork the process after the backend has been initialized (Spring, Puma workers, and so on). The backend loads lazily, so forking before the first call is safe.
@@ -324,19 +324,19 @@ llm_tune is designed for CLI, Rake tasks, batch jobs, and offline experiments. I
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then run `bundle exec rake` for the unit tests and RuboCop. Unit tests never load PyCall or Python;
-the Python backend is replaced by a fake at the backend seam (`LLMTune.backend=`).
+the Python backend is replaced by a fake at the backend seam (`Grain.backend=`).
 
 An integration test runs a real fine-tune with a tiny model on CPU. It needs a prepared Python environment and network access for the first model download:
 
 ```console
-$ LLM_TUNE_INTEGRATION=1 bundle exec rake test:integration
+$ GRAIN_INTEGRATION=1 bundle exec rake test:integration
 ```
 
 The same tests run weekly on CI, and on demand through the Integration workflow.
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/koic/llm_tune.
+Bug reports and pull requests are welcome on GitHub at https://github.com/koic/grain.
 
 ## License
 
