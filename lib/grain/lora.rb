@@ -5,10 +5,10 @@ require 'time'
 require 'tmpdir'
 
 module Grain
-  # LoRA fine-tuning. Keeps the base model weights W frozen and learns
+  # LoRA fine-tuning. Keeps the base model weights W0 frozen and learns
   # a low-rank update delta W ~= B A of rank r:
   #
-  #   W' = W + B A
+  #   W = W0 + B A
   #
   # The `rank:` option is exactly that r.
   module LoRA

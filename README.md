@@ -31,14 +31,16 @@ Early proof of concept (v0.1). The lifecycle model of the public API is expected
 
 ## The model behind the API
 
-LoRA keeps the base model weights `W` frozen and learns a low-rank update of rank `r`:
+LoRA keeps the base model weights $W_0$ frozen and learns a low-rank update of rank $r$:
 
-```text
-W' = W + delta W
-delta W ~= B A
+```math
+\begin{aligned}
+W &= W_0 + \Delta W \\
+\Delta W &\approx BA
+\end{aligned}
 ```
 
-`A` and `B` are small matrices. Training produces them; merging adds `B A` back into `W`. The API is the same shape:
+$A$ and $B$ are small matrices. Training produces them; merging adds $BA$ back into $W_0$. The API is the same shape:
 
 ```text
 Base Model
@@ -52,7 +54,7 @@ LoRA Adapter
 Merged Model
 ```
 
-The `rank:` option in the API is exactly the `r` above.
+The `rank:` option in the API is exactly the $r$ above.
 
 ## Requirements
 
@@ -114,7 +116,7 @@ adapter = Grain::LoRA.train(
 )
 adapter.save('./ruby-lora')
 
-model = adapter.merge # W' = W + B A
+model = adapter.merge # W = W0 + B A
 model.save('./ruby-model')
 ```
 

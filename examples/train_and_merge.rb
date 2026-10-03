@@ -24,7 +24,7 @@ puts base.generate(PROMPT, max_new_tokens: 60)
 adapter = Grain::LoRA.train(
   model: BASE_MODEL,
   dataset: File.expand_path('ruby_answers.jsonl', __dir__),
-  rank: 8, # The LoRA rank r in W' = W + B A.
+  rank: 8, # The LoRA rank r in W = W0 + B A.
   alpha: 16,
   dropout: 0.05,
   epochs: 10 # The 40-sample dataset trains in seconds, so re-read it often.
