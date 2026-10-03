@@ -1,33 +1,16 @@
 # Grain
 
-Grain is a Ruby gem for LoRA fine-tuning of large language models. It provides a Ruby API and CLI that model the LoRA lifecycle,
+Grain brings LoRA fine-tuning of large language models to Ruby. It provides a Ruby API and CLI that model the LoRA lifecycle,
 while the heavy lifting is done by the Python ecosystem (PyTorch, Hugging Face Transformers, PEFT, Datasets, Accelerate) through PyCall.
 
-```text
-Ruby application / CLI
-        |
-        v
-     grain
-        |
-        v
-     PyCall
-        |
-        v
-Python backend (bundled, private)
-   |- transformers
-   |- peft
-   |- datasets
-   `- torch
-        |
-        v
-CUDA / MPS / CPU
-```
+## Features
 
-grain does not reimplement Transformers or LoRA in Ruby, and it does not hide what fine-tuning is. It hides Python plumbing, not concepts.
-
-## Status
-
-Early proof of concept (v0.1). The lifecycle model of the public API is expected to stay, but details may change until v1.0.
+- LoRA fine-tuning from JSONL files or Ruby Enumerables, in plain text, instruction, and chat formats
+- Merging an adapter into its base model to produce a standalone model
+- Generation and chat with a merged model, a Hugging Face model id, or an adapter on top of its base model
+- Apple Silicon (MPS) as a first-class target, with CUDA and CPU auto-detected
+- Validation loss, per-epoch checkpoints, and resuming
+- A CLI that mirrors the Ruby API, and `grain doctor` to check the Python environment
 
 ## The model behind the API
 
@@ -42,19 +25,12 @@ W &= W_0 + \Delta W \\
 
 $A$ and $B$ are small matrices. Training produces them; merging adds $BA$ back into $W_0$. The API is the same shape:
 
-```text
-Base Model
-    |
-    | train
-    v
-LoRA Adapter
-    |
-    | merge
-    v
-Merged Model
+```mermaid
+flowchart LR
+  base[Base Model] -- train --> adapter[LoRA Adapter] -- merge --> merged[Merged Model]
 ```
 
-The `rank:` option in the API is exactly the $r$ above.
+The [`rank:` option](#options) of `Grain::LoRA.train` is exactly the $r$ above.
 
 ## Requirements
 
@@ -315,6 +291,21 @@ $ grain generate \
 
 `grain doctor` and `grain version` are also available.
 
+## Architecture
+
+The Ruby side is a thin layer. Each call goes through PyCall to a Python backend bundled with the gem,
+which drives the Python libraries that do the actual work on the selected device:
+
+```mermaid
+flowchart TD
+  ruby[Ruby application / CLI] --> grain --> pycall[PyCall] --> backend["Python backend (bundled, private)"]
+  backend --> datasets & transformers & peft & torch
+  transformers & peft --> torch
+  torch --> device[CUDA / MPS / CPU]
+```
+
+grain does not reimplement Transformers or LoRA in Ruby, and it does not hide what fine-tuning is. It hides Python plumbing, not concepts.
+
 ## Process model and limitations
 
 grain is designed for CLI, Rake tasks, batch jobs, and offline experiments. It is not designed to run inside web application workers:
@@ -335,10 +326,6 @@ $ GRAIN_INTEGRATION=1 bundle exec rake test:integration
 ```
 
 The same tests run weekly on CI, and on demand through the Integration workflow.
-
-## Contributing
-
-Bug reports and pull requests are welcome on GitHub at https://github.com/koic/grain.
 
 ## License
 
