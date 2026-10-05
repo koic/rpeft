@@ -127,7 +127,7 @@ module Grain
 
         PyCall.import_module('grain_backend')
       rescue PyCall::PyError => e
-        raise DependencyError, "failed to import the grain Python backend: #{e.message}"
+        raise DependencyError, "failed to import the Grain Python backend: #{e.message}"
       rescue PyCall::Error => e
         raise DependencyError, "Python interpreter not found or PyCall failed to initialize (#{e.message}). " \
                                'PyCall needs a Python with a shared libpython built for the same CPU ' \

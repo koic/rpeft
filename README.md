@@ -68,7 +68,7 @@ Note for pyenv users: PyCall needs a shared libpython, so install the interprete
 $ PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install 3.12
 ```
 
-When a `.venv` directory exists in the current directory, grain uses it automatically. Set the `PYTHON` environment variable to override the interpreter,
+When a `.venv` directory exists in the current directory, Grain uses it automatically. Set the `PYTHON` environment variable to override the interpreter,
 then check the environment:
 
 ```console
@@ -161,7 +161,7 @@ chat_model.chat([
 Reach for `#chat` when the model understands a chat template: an instruction-tuned model, or one fine-tuned on
 chat-format data. A base model is a different matter. `Qwen/Qwen2.5-Coder-0.5B`, for instance, ships a chat template
 but was never instruction-tuned, so prompting it in chat form produces poor output while `#generate` with a plain prompt works well.
-The rule is the same one that governs the dataset formats: **the prompt at inference should look like the text the model was trained on.**
+The rule behind this also applies to choosing a dataset format: the prompt at inference should look like the text the model was trained on.
 
 ### Options
 
@@ -298,17 +298,17 @@ which drives the Python libraries that do the actual work on the selected device
 
 ```mermaid
 flowchart TD
-  ruby[Ruby application / CLI] --> grain --> pycall[PyCall] --> backend["Python backend (bundled, private)"]
+  ruby[Ruby application / CLI] --> grain[Grain] --> pycall[PyCall] --> backend["Python backend (bundled, private)"]
   backend --> datasets & transformers & peft & torch
   transformers & peft --> torch
   torch --> device[CUDA / MPS / CPU]
 ```
 
-grain does not reimplement Transformers or LoRA in Ruby, and it does not hide what fine-tuning is. It hides Python plumbing, not concepts.
+Grain does not reimplement Transformers or LoRA in Ruby, and it does not hide what fine-tuning is. It hides Python plumbing, not concepts.
 
 ## Process model and limitations
 
-grain is designed for CLI, Rake tasks, batch jobs, and offline experiments. It is not designed to run inside web application workers:
+Grain is designed for CLI, Rake tasks, batch jobs, and offline experiments. It is not designed to run inside web application workers:
 
 - PyCall embeds a single Python interpreter in the Ruby process. Backend calls hold the Python GIL and block the calling Ruby thread for the whole training run.
 - Do not fork the process after the backend has been initialized (Spring, Puma workers, and so on). The backend loads lazily, so forking before the first call is safe.

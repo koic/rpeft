@@ -14,7 +14,7 @@ module Grain
       dest = File.expand_path(dest)
       if File.exist?(dest)
         unless replaceable?(dest, replace_markers)
-          raise Error, "destination already exists: #{dest} (grain only replaces " \
+          raise Error, "destination already exists: #{dest} (Grain only replaces " \
                        'directories it previously saved; remove it or pick another path)'
         end
 

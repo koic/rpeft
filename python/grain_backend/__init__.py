@@ -1,4 +1,4 @@
-"""Private Python backend for the grain Ruby gem.
+"""Private Python backend for the Grain Ruby gem.
 
 Imported through PyCall; not a public API. Every facade function takes
 a JSON string and returns a JSON string, so only plain strings cross

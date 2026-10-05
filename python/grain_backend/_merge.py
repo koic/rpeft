@@ -36,7 +36,7 @@ def merge_lora(config):
 def _load_tokenizer(adapter_path, base_model):
     from transformers import AutoTokenizer
 
-    # Adapters trained by grain carry their tokenizer; fall back to
+    # Adapters trained by Grain carry their tokenizer; fall back to
     # the base model for adapters produced by plain PEFT.
     try:
         return AutoTokenizer.from_pretrained(adapter_path)

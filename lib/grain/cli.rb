@@ -19,7 +19,7 @@ module Grain
         lora merge   Merge a LoRA adapter into its base model
         generate     Generate text from a base or fine-tuned model
         doctor       Diagnose the Python environment
-        version      Print the grain version
+        version      Print the Grain version
         help         Show this message
 
       Run `grain <command> --help` for command options.
