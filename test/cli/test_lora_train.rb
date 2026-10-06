@@ -25,6 +25,15 @@ class TestCLILoraTrain < GrainTest
     assert_empty @backend.calls
   end
 
+  def test_help_lists_every_dataset_format
+    status, out, = run_cli(%w(lora train --help))
+
+    assert_equal 0, status
+    assert_includes out, '"text"'
+    assert_includes out, '"instruction"/"output"'
+    assert_includes out, '"messages"'
+  end
+
   def test_rejects_an_invalid_option_value
     status, _out, err = run_cli(['lora', 'train', '--model', 'm', '--dataset', @dataset,
                                  '--output', File.join(@workdir, 'adapter'), '--rank', 'x'])

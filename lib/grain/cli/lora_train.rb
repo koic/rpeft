@@ -17,7 +17,7 @@ module Grain
           o.on('--model MODEL', 'Base model (Hugging Face id or local path)') do |v|
             options[:model] = v
           end
-          o.on('--dataset FILE', %(Training dataset (JSONL with a "text" field))) do |v|
+          o.on('--dataset FILE', %(Training dataset (JSONL with "text", "instruction"/"output", or "messages" lines))) do |v|
             options[:dataset] = v
           end
           o.on('--output DIR', 'Directory to save the trained adapter') do |v|
