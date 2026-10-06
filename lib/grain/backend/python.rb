@@ -35,6 +35,16 @@ module Grain
         Dir[File.join(venv_root, 'lib', 'python*', 'site-packages')].first
       end
 
+      # PyCall never finalizes the embedded interpreter, so without this Python's atexit handlers never run.
+      # multiprocessing relies on them to unregister its semaphores (tqdm creates one for its progress bars),
+      # and resource_tracker would otherwise warn about leaked semaphores when the process exits.
+      def self.run_exit_handlers(atexit)
+        atexit._run_exitfuncs
+      rescue StandardError
+        # The Ruby process is already exiting; a failing Python handler must not turn that into an error.
+        nil
+      end
+
       def initialize
         @mutex = Mutex.new
       end
@@ -125,7 +135,9 @@ module Grain
         sys = PyCall.import_module('sys')
         sys.path.insert(0, PYTHON_DIR)
 
-        PyCall.import_module('grain_backend')
+        backend = PyCall.import_module('grain_backend')
+        install_exit_hook(PyCall.import_module('atexit'))
+        backend
       rescue PyCall::PyError => e
         raise DependencyError, "failed to import the Grain Python backend: #{e.message}"
       rescue PyCall::Error => e
@@ -134,6 +146,10 @@ module Grain
                                "architecture as Ruby; static builds (pyenv's default) and an x86_64 Ruby " \
                                'under Rosetta with an arm64 Python do not work. Set the PYTHON environment ' \
                                'variable to a compatible interpreter, e.g. PYTHON=$(command -v python3.12).'
+      end
+
+      def install_exit_hook(atexit)
+        at_exit { self.class.run_exit_handlers(atexit) }
       end
     end
   end

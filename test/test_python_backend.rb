@@ -4,6 +4,15 @@ require 'test_helper'
 require 'grain/backend/python'
 
 class TestPythonBackend < Minitest::Test
+  # Stands in for Python's atexit module.
+  class FakeAtexit
+    attr_reader :ran
+
+    def _run_exitfuncs
+      @ran = true
+    end
+  end
+
   def setup
     @workdir = Dir.mktmpdir('grain_test')
   end
@@ -55,6 +64,38 @@ class TestPythonBackend < Minitest::Test
         assert_nil Grain::Backend::Python.default_python
       end
     end
+  end
+
+  def test_run_exit_handlers_runs_the_python_atexit_handlers
+    atexit = FakeAtexit.new
+
+    Grain::Backend::Python.run_exit_handlers(atexit)
+
+    assert atexit.ran
+  end
+
+  def test_run_exit_handlers_ignores_a_failing_python_handler
+    atexit = Object.new
+    def atexit._run_exitfuncs
+      raise 'handler failed'
+    end
+
+    assert_nil Grain::Backend::Python.run_exit_handlers(atexit)
+  end
+
+  def test_install_exit_hook_runs_the_python_atexit_handlers_at_exit
+    backend = Grain::Backend::Python.new
+    hooks = []
+    backend.define_singleton_method(:at_exit) do |&hook|
+      hooks << hook
+    end
+    atexit = FakeAtexit.new
+
+    backend.send(:install_exit_hook, atexit)
+
+    refute atexit.ran
+    hooks.each(&:call)
+    assert atexit.ran
   end
 
   private
