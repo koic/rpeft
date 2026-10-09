@@ -347,19 +347,6 @@ Grain is designed for CLI, Rake tasks, batch jobs, and offline experiments. It i
 - Do not fork the process after the backend has been initialized (Spring, Puma workers, and so on). The backend loads lazily, so forking before the first call is safe.
 - Training keeps no checkpoints unless `checkpoints: true` is passed, so by default a crash during training loses that run's progress.
 
-## Development
-
-After checking out the repo, run `bin/setup` to install dependencies. Then run `bundle exec rake` for the unit tests and RuboCop. Unit tests never load PyCall or Python;
-`Grain::Backend::Python` is replaced by a fake at the backend seam (`Grain.backend=`).
-
-An integration test runs a real fine-tune with a tiny model on CPU. It needs a prepared Python environment and network access for the first model download:
-
-```console
-$ GRAIN_INTEGRATION=1 bundle exec rake test:integration
-```
-
-The same tests run weekly on CI, and on demand through the Integration workflow.
-
 ## Name
 
 A model is hundreds of millions or billions of scalar parameters, and LoRA trains only a small fraction of them.
