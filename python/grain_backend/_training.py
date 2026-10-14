@@ -1,5 +1,6 @@
 import gc
 import os
+import shutil
 
 from . import _data, _device, _models
 from ._errors import stage
@@ -40,7 +41,7 @@ def train_lora(config):
         with stage("training"):
             model, target_modules, param_counts = _apply_lora(model, lora)
             trainer = _build_trainer(model, tokenizer, dataset, eval_dataset, config, device, dtype)
-            resume = config.get("resume_from_checkpoint") or None
+            resume = _resume_point(config)
             metrics = trainer.train(resume_from_checkpoint=resume).metrics
             steps = trainer.state.global_step
             if eval_dataset is not None:
@@ -49,6 +50,9 @@ def train_lora(config):
         with stage("adapter_save"):
             model.save_pretrained(output_dir)
             tokenizer.save_pretrained(output_dir)
+            # Checkpoints only serve resuming an interrupted run. Once the adapter is saved they would
+            # just travel with it wherever the adapter directory is saved or shared.
+            shutil.rmtree(_trainer_dir(output_dir), ignore_errors=True)
 
         return _result(
             config, device, dtype, target_modules, param_counts, metrics, steps, len(dataset)
@@ -93,7 +97,7 @@ def _build_trainer(model, tokenizer, dataset, eval_dataset, config, device, dtyp
     )
 
     args = TrainingArguments(
-        output_dir=os.path.join(config["output_dir"], ".trainer"),
+        output_dir=_trainer_dir(config["output_dir"]),
         num_train_epochs=config.get("epochs", 3),
         per_device_train_batch_size=config.get("batch_size", 4),
         learning_rate=config.get("learning_rate", 2e-4),
@@ -139,3 +143,18 @@ def _result(config, device, dtype, target_modules, param_counts, metrics, steps,
         "total_params": int(total_params),
         "effective_config": effective,
     }
+
+
+def _trainer_dir(output_dir):
+    return os.path.join(output_dir, ".trainer")
+
+
+def _resume_point(config):
+    if not config.get("resume_from_checkpoint"):
+        return None
+
+    from transformers.trainer_utils import get_last_checkpoint
+
+    # A finished run removes its checkpoints, so there may be nothing to resume; train from the start then.
+    trainer_dir = _trainer_dir(config["output_dir"])
+    return get_last_checkpoint(trainer_dir) if os.path.isdir(trainer_dir) else None

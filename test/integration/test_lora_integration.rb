@@ -113,6 +113,22 @@ class TestLoRAIntegration < Minitest::Test
     assert_instance_of String, reply
   end
 
+  def test_lora_train_removes_its_checkpoints_once_the_adapter_is_saved
+    options = {
+      model: TINY_MODEL, dataset: @dataset, output_dir: File.join(@workdir, 'adapter'),
+      rank: 2, epochs: 1, batch_size: 2, max_length: 64, device: :cpu, checkpoints: true, resume: true
+    }
+
+    adapter = Grain::LoRA.train(**options)
+
+    refute File.exist?(File.join(adapter.path, '.trainer'))
+
+    # With the checkpoints gone, resuming the same run again starts over instead of failing.
+    again = Grain::LoRA.train(**options)
+
+    assert_path_exists File.join(again.path, 'adapter_model.safetensors')
+  end
+
   def test_chat_messages_cannot_contain_the_tokenizer_control_tokens
     Grain.check
     tokenizer = PyCall.import_module('transformers').AutoTokenizer.from_pretrained(TINY_MODEL)

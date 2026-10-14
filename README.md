@@ -181,7 +181,7 @@ The rule behind this also applies to choosing a dataset format: the prompt at in
 | `learning_rate:`  | `2e-4`  | Learning rate                                                                           |
 | `max_length:`     | `512`   | Max token length per example                                                            |
 | `eval_dataset:`   | `nil`   | Held-out dataset, in the same format as `dataset:`. Enables per-epoch evaluation        |
-| `checkpoints:`    | `false` | Save a checkpoint after every epoch, so a long run can be resumed                       |
+| `checkpoints:`    | `false` | Checkpoint every epoch so an interrupted run can resume; removed once training ends     |
 | `resume:`         | `false` | Resume from the last checkpoint in `output_dir`, which must be given explicitly         |
 | `output_dir:`     | `nil`   | Adapter output directory. `nil` uses a temporary directory; `save` moves it             |
 | `device:`         | `:auto` | `:auto`, `:cuda`, `:mps`, or `:cpu`                                                     |
