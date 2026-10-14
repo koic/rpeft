@@ -44,7 +44,7 @@ module Grain
         build_adapter(
           adapter_dir: adapter_dir,
           model: model,
-          dataset_path: training_dataset.path,
+          dataset_name: training_dataset.name,
           device: resolved_device,
           options: options,
           result: result
@@ -136,11 +136,11 @@ module Grain
         payload
       end
 
-      def build_adapter(adapter_dir:, model:, dataset_path:, device:, options:, result:)
+      def build_adapter(adapter_dir:, model:, dataset_name:, device:, options:, result:)
         target_modules = result.dig('effective_config', 'lora', 'target_modules') || options[:target_modules]
         metadata = build_metadata(
           model: model,
-          dataset_path: dataset_path,
+          dataset_name: dataset_name,
           device: device,
           options: options,
           target_modules: target_modules,
@@ -159,7 +159,7 @@ module Grain
         )
       end
 
-      def build_metadata(model:, dataset_path:, device:, options:, target_modules:, result:)
+      def build_metadata(model:, dataset_name:, device:, options:, target_modules:, result:)
         {
           'schema_version' => 1,
           'grain_version' => VERSION,
@@ -173,7 +173,7 @@ module Grain
             'target_modules' => target_modules
           },
           'training' => {
-            'dataset' => dataset_path,
+            'dataset' => dataset_name,
             'epochs' => options[:epochs],
             'batch_size' => options[:batch_size],
             'learning_rate' => options[:learning_rate],

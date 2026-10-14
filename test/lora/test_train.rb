@@ -81,6 +81,30 @@ class TestLoRATrain < GrainTest
     assert_equal 'cpu', metadata.dig('training', 'device')
   end
 
+  def test_records_the_dataset_file_name_rather_than_its_path
+    adapter = train
+
+    assert_equal 'train.jsonl', adapter.metadata.dig('training', 'dataset')
+  end
+
+  def test_records_the_original_file_name_of_an_instruction_dataset
+    File.write(@dataset, %({"instruction":"Say hi","output":"hi"}\n))
+
+    adapter = train
+
+    assert_equal 'train.jsonl', adapter.metadata.dig('training', 'dataset')
+  end
+
+  def test_records_no_dataset_name_for_in_memory_records
+    adapter = Grain::LoRA.train(
+      model: 'fake/model',
+      dataset: [{text: 'from memory'}],
+      output_dir: File.join(@workdir, 'adapter')
+    )
+
+    assert_nil adapter.metadata.dig('training', 'dataset')
+  end
+
   def test_creates_a_temporary_output_directory_by_default
     adapter = Grain::LoRA.train(model: 'fake/model', dataset: @dataset)
 

@@ -35,12 +35,15 @@ module Grain
       end
       raise DatasetError, 'dataset is empty: no records were given' if written.zero?
 
-      new(path)
+      new(path, name: nil)
     end
 
-    attr_reader :path, :format
+    # name is the file name the dataset came from, recorded in the adapter metadata;
+    # nil for in-memory records, which have no file of their own.
+    attr_reader :path, :format, :name
 
-    def initialize(source)
+    def initialize(source, name: File.basename(source.to_s))
+      @name = name
       source_path = existing_file(source)
       @format = detect_format(source_path)
       @path = @format == :instruction ? normalize(source_path) : source_path
