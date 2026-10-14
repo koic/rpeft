@@ -35,6 +35,14 @@ class TestGrain < GrainTest
     assert_equal 'degraded', Grain.check['status']
   end
 
+  def test_check_reports_outdated_libraries_as_degraded
+    diagnostics = FakeBackend.healthy_diagnostics
+    diagnostics['libraries']['transformers']['outdated'] = true
+    Grain.backend = FakeBackend.new(responses: {diagnostics: diagnostics})
+
+    assert_equal 'degraded', Grain.check['status']
+  end
+
   def test_check_reports_an_unusable_backend_without_raising
     Grain.backend = FakeBackend.new(error: Grain::DependencyError.new('no python'))
 

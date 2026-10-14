@@ -41,7 +41,7 @@ The [`rank:` option](#training-options) of `Grain::LoRA.train` is exactly the $r
 - Python 3.10+ with a shared libpython (static Python builds such as pyenv's default do not work; tested with Python 3.12)
 - Ruby and Python built for the same CPU architecture. On Apple Silicon, an x86_64 Ruby running under Rosetta cannot load an arm64 libpython;
   a symbol error such as `_Py_NoneStruct` from `grain doctor` usually means this mismatch
-- The Python packages `torch`, `transformers`, `peft`, `datasets`, and `accelerate`
+- The Python packages `torch` (2.6 or later), `transformers` (4.56 or later), `peft`, `datasets`, and `accelerate`
 
 ## Installation
 

@@ -26,6 +26,19 @@ class TestCLIDoctor < GrainTest
     assert_includes out, 'pip install'
   end
 
+  def test_reports_outdated_python_packages
+    diagnostics = FakeBackend.healthy_diagnostics
+    diagnostics['libraries']['torch'] = {'installed' => true, 'version' => '2.5.1', 'minimum' => '2.6', 'outdated' => true}
+    Grain.backend = FakeBackend.new(responses: {diagnostics: diagnostics})
+
+    status, out, = run_cli(['doctor'])
+
+    assert_equal 1, status
+    assert_includes out, 'OUTDATED 2.5.1 (needs 2.6 or later)'
+    assert_includes out, 'DEGRADED'
+    assert_includes out, 'pip install --upgrade'
+  end
+
   def test_reports_an_unusable_backend
     Grain.backend = FakeBackend.new(
       error: Grain::DependencyError.new('Python interpreter not found')

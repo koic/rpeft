@@ -47,10 +47,12 @@ module Grain
 
       def render_libraries(libraries)
         (libraries || {}).each do |name, info|
-          if info['installed']
-            line name, "OK #{info['version']}"
-          else
+          if !info['installed']
             line name, 'MISSING'
+          elsif info['outdated']
+            line name, "OUTDATED #{info['version']} (needs #{info['minimum']} or later)"
+          else
+            line name, "OK #{info['version']}"
           end
         end
       end
@@ -66,7 +68,7 @@ module Grain
       def render_hint(report)
         return unless report['status'] == 'degraded'
 
-        @out.puts 'Hint: pip install torch transformers peft datasets accelerate'
+        @out.puts 'Hint: pip install --upgrade torch transformers peft datasets accelerate'
       end
     end
   end

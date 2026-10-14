@@ -25,13 +25,28 @@ def _backend_version():
 
 
 def _library_info(name):
+    from . import _versions
+
+    minimum = _versions.MINIMUMS.get(name)
     if importlib.util.find_spec(name) is None:
-        return {"installed": False, "version": None}
+        return {"installed": False, "version": None, "minimum": minimum, "outdated": False}
     try:
         module = importlib.import_module(name)
-        return {"installed": True, "version": getattr(module, "__version__", None)}
+        version = getattr(module, "__version__", None)
+        return {
+            "installed": True,
+            "version": version,
+            "minimum": minimum,
+            "outdated": _versions.is_outdated(name, version),
+        }
     except Exception as error:
-        return {"installed": False, "version": None, "error": str(error)}
+        return {
+            "installed": False,
+            "version": None,
+            "minimum": minimum,
+            "outdated": False,
+            "error": str(error),
+        }
 
 
 def _device_info():

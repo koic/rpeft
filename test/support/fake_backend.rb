@@ -20,8 +20,8 @@ class FakeBackend
       'python' => {'executable' => '/usr/bin/python3', 'version' => '3.12.4'},
       'backend_version' => Grain::VERSION,
       'libraries' => {
-        'torch' => {'installed' => true, 'version' => '2.4.0'},
-        'transformers' => {'installed' => true, 'version' => '4.44.0'},
+        'torch' => {'installed' => true, 'version' => '2.6.0', 'minimum' => '2.6', 'outdated' => false},
+        'transformers' => {'installed' => true, 'version' => '4.56.0', 'minimum' => '4.56', 'outdated' => false},
         'peft' => {'installed' => true, 'version' => '0.12.0'},
         'datasets' => {'installed' => true, 'version' => '2.21.0'},
         'accelerate' => {'installed' => true, 'version' => '0.33.0'}

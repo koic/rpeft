@@ -37,19 +37,25 @@ _repair_sys_executable()
 
 
 def train_lora(config_json):
-    from . import _training
+    from . import _training, _versions
+
+    _versions.require_minimums()
 
     return json.dumps(_training.train_lora(json.loads(config_json)))
 
 
 def merge_lora(config_json):
-    from . import _merge
+    from . import _merge, _versions
+
+    _versions.require_minimums()
 
     return json.dumps(_merge.merge_lora(json.loads(config_json)))
 
 
 def generate(config_json):
-    from . import _generate
+    from . import _generate, _versions
+
+    _versions.require_minimums()
 
     return json.dumps(_generate.generate(json.loads(config_json)))
 

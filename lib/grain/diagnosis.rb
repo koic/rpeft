@@ -35,8 +35,10 @@ module Grain
 
     def status_of(diagnostics)
       libraries = diagnostics['libraries'] || {}
-      missing = REQUIRED_LIBRARIES.reject { |name| libraries.dig(name, 'installed') }
-      missing.empty? ? 'ok' : 'degraded'
+      unusable = REQUIRED_LIBRARIES.reject { |name|
+        libraries.dig(name, 'installed') && !libraries.dig(name, 'outdated')
+      }
+      unusable.empty? ? 'ok' : 'degraded'
     end
   end
 end
