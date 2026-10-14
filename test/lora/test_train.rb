@@ -69,7 +69,7 @@ class TestLoRATrain < GrainTest
   def test_writes_grain_metadata_into_the_adapter_directory
     adapter = train(epochs: 2)
 
-    metadata = JSON.parse(File.read(File.join(adapter.path, 'grain.json')))
+    metadata = JSON.parse(File.read(File.join(adapter.path, 'grain_metadata.json')))
 
     assert_equal 1, metadata['schema_version']
     assert_equal 'lora_adapter', metadata['kind']
@@ -109,7 +109,7 @@ class TestLoRATrain < GrainTest
     adapter = Grain::LoRA.train(model: 'fake/model', dataset: @dataset)
 
     assert File.directory?(adapter.path)
-    assert_path_exists File.join(adapter.path, 'grain.json')
+    assert_path_exists File.join(adapter.path, 'grain_metadata.json')
   ensure
     FileUtils.remove_entry(adapter.path) if adapter
   end

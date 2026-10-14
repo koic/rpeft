@@ -67,6 +67,6 @@ class TestCLILoraMerge < GrainTest
       'base_model' => base_model,
       'lora' => {'rank' => 8}
     }
-    File.write(File.join(@adapter_dir, 'grain.json'), JSON.generate(metadata))
+    File.write(File.join(@adapter_dir, 'grain_metadata.json'), JSON.generate(metadata))
   end
 end

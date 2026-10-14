@@ -336,7 +336,7 @@ Arrows show what each part uses at run time, not package dependencies.
 Grain does not reimplement Transformers or LoRA in Ruby, and it does not hide what fine-tuning is. It hides Python plumbing, not concepts.
 
 For the same reason, adapters are saved and loaded by PEFT itself. An adapter directory is a standard PEFT adapter (`adapter_config.json` and `adapter_model.safetensors`) with
-Grain's own metadata in `grain.json` alongside, so adapters trained with Grain load in Python with PEFT's `PeftModel.from_pretrained`, and `Grain::LoRA::Adapter.load` accepts
+Grain's own metadata in `grain_metadata.json` alongside, so adapters trained with Grain load in Python with PEFT's `PeftModel.from_pretrained`, and `Grain::LoRA::Adapter.load` accepts
 adapters produced by plain PEFT.
 
 ## Process model and limitations

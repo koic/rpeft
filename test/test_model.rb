@@ -69,7 +69,7 @@ class TestModel < GrainTest
   def test_write_metadata_marks_a_merged_model
     Grain::Model.write_metadata(@model_dir, base_model: 'fake/model')
 
-    metadata = JSON.parse(File.read(File.join(@model_dir, 'grain.json')))
+    metadata = JSON.parse(File.read(File.join(@model_dir, 'grain_metadata.json')))
 
     assert_equal 'merged_model', metadata['kind']
     assert_equal 'fake/model', metadata['base_model']

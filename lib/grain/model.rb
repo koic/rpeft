@@ -7,7 +7,7 @@ module Grain
   # A full model: either a local directory (typically the result of merging a LoRA adapter)
   # or a Hugging Face Hub model id.
   class Model
-    METADATA_FILE = 'grain.json'
+    METADATA_FILE = 'grain_metadata.json'
     # Not config.json: it is a common name outside model directories, and a mistyped save destination
     # holding one would otherwise be deleted.
     REPLACE_MARKERS = [METADATA_FILE].freeze

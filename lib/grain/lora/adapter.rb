@@ -9,7 +9,7 @@ module Grain
     # A trained LoRA adapter directory: the learned B A matrices plus the configuration
     # and metadata needed to merge them back into the base model.
     class Adapter
-      METADATA_FILE = 'grain.json'
+      METADATA_FILE = 'grain_metadata.json'
       PEFT_CONFIG_FILE = 'adapter_config.json'
       REPLACE_MARKERS = [METADATA_FILE, PEFT_CONFIG_FILE].freeze
 
@@ -46,7 +46,7 @@ module Grain
         end
 
         # Fallback for adapter directories produced by plain PEFT,
-        # which have no grain.json.
+        # which have no grain_metadata.json.
         def from_peft_config(dir, config, base_model)
           new(
             path: dir,

@@ -33,7 +33,7 @@ class TestCLIGenerate < GrainTest
     adapter_dir = File.join(@workdir, 'adapter')
     FileUtils.mkdir_p(adapter_dir)
     metadata = {'kind' => 'lora_adapter', 'base_model' => 'meta/base', 'lora' => {'rank' => 8}}
-    File.write(File.join(adapter_dir, 'grain.json'), JSON.generate(metadata))
+    File.write(File.join(adapter_dir, 'grain_metadata.json'), JSON.generate(metadata))
 
     status, out, = run_cli(['generate', '--adapter', adapter_dir, '--prompt', 'User: hi', '--device', 'cpu'])
 

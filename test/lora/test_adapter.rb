@@ -83,7 +83,7 @@ class TestLoRAAdapter < GrainTest
     File.write(File.join(@adapter_dir, 'dummy'), 'new')
     dest = File.join(@workdir, 'saved')
     FileUtils.mkdir_p(dest)
-    File.write(File.join(dest, 'grain.json'), '{}')
+    File.write(File.join(dest, 'grain_metadata.json'), '{}')
     File.write(File.join(dest, 'stale'), 'old')
 
     new_adapter.save(dest)
@@ -113,7 +113,7 @@ class TestLoRAAdapter < GrainTest
 
     new_adapter.merge(output_dir: merged_dir)
 
-    metadata = JSON.parse(File.read(File.join(merged_dir, 'grain.json')))
+    metadata = JSON.parse(File.read(File.join(merged_dir, 'grain_metadata.json')))
     assert_equal 'merged_model', metadata['kind']
     assert_equal 'fake/model', metadata['base_model']
   end
@@ -192,6 +192,6 @@ class TestLoRAAdapter < GrainTest
                  'target_modules' => %w(q_proj v_proj)},
       'training' => {'train_loss' => 1.23}
     }
-    File.write(File.join(@adapter_dir, 'grain.json'), JSON.generate(metadata))
+    File.write(File.join(@adapter_dir, 'grain_metadata.json'), JSON.generate(metadata))
   end
 end
