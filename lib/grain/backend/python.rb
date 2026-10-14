@@ -12,15 +12,20 @@ module Grain
     class Python
       PYTHON_DIR = File.expand_path('../../../python', __dir__)
 
-      # The interpreter to use: the PYTHON environment variable when set, otherwise ./.venv/bin/python
-      # when the current directory has one, otherwise nil (PyCall falls back to python3 on PATH).
+      # The interpreter to use: the PYTHON environment variable when set, otherwise .venv/bin/python next to
+      # the Gemfile of the running bundle, otherwise nil (PyCall falls back to python3 on PATH).
+      # The bundle root rather than the current directory, so the choice does not depend on where a command
+      # happens to be run.
       def self.default_python
         python = ENV.fetch('PYTHON', nil)
         return python if python && !python.empty?
 
-        local_venv = File.expand_path('.venv/bin/python', Dir.pwd)
+        gemfile = ENV.fetch('BUNDLE_GEMFILE', nil)
+        return nil if gemfile.nil? || gemfile.empty?
 
-        File.executable?(local_venv) ? local_venv : nil
+        bundle_venv = File.join(File.dirname(File.expand_path(gemfile)), '.venv', 'bin', 'python')
+
+        File.executable?(bundle_venv) ? bundle_venv : nil
       end
 
       # When PYTHON points into a venv, returns its site-packages directory; nil otherwise.

@@ -44,25 +44,32 @@ class TestPythonBackend < Minitest::Test
     end
   end
 
-  def test_default_python_falls_back_to_a_local_venv
-    python = fake_venv_python(with_pyvenv_cfg: true)
-    FileUtils.chmod(0o755, python)
-    FileUtils.mv(File.join(@workdir, 'venv'), File.join(@workdir, '.venv'))
+  def test_default_python_falls_back_to_the_venv_next_to_the_gemfile
+    fake_dot_venv
+    gemfile = File.join(@workdir, 'Gemfile')
+    subdir = File.join(@workdir, 'scripts')
+    FileUtils.mkdir_p(subdir)
 
-    with_env('PYTHON' => nil) do
+    with_env('PYTHON' => nil, 'BUNDLE_GEMFILE' => gemfile) do
+      Dir.chdir(subdir) do
+        assert_equal File.join(@workdir, '.venv', 'bin', 'python'), Grain::Backend::Python.default_python
+      end
+    end
+  end
+
+  def test_default_python_ignores_a_venv_in_the_current_directory_outside_a_bundle
+    fake_dot_venv
+
+    with_env('PYTHON' => nil, 'BUNDLE_GEMFILE' => nil) do
       Dir.chdir(@workdir) do
-        expected = File.expand_path('.venv/bin/python', Dir.pwd)
-
-        assert_equal expected, Grain::Backend::Python.default_python
+        assert_nil Grain::Backend::Python.default_python
       end
     end
   end
 
   def test_default_python_returns_nil_without_a_venv_or_environment_variable
-    with_env('PYTHON' => nil) do
-      Dir.chdir(@workdir) do
-        assert_nil Grain::Backend::Python.default_python
-      end
+    with_env('PYTHON' => nil, 'BUNDLE_GEMFILE' => File.join(@workdir, 'Gemfile')) do
+      assert_nil Grain::Backend::Python.default_python
     end
   end
 
@@ -118,5 +125,11 @@ class TestPythonBackend < Minitest::Test
     File.write(python, '')
     File.write(File.join(venv, 'pyvenv.cfg'), "home = /opt/python\n") if with_pyvenv_cfg
     python
+  end
+
+  def fake_dot_venv
+    python = fake_venv_python(with_pyvenv_cfg: true)
+    FileUtils.chmod(0o755, python)
+    FileUtils.mv(File.join(@workdir, 'venv'), File.join(@workdir, '.venv'))
   end
 end

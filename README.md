@@ -71,7 +71,7 @@ Note for pyenv users: PyCall needs a shared libpython, so install the interprete
 $ PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install 3.12
 ```
 
-When a `.venv` directory exists in the current directory, Grain uses it automatically. Set the `PYTHON` environment variable to override the interpreter,
+When a `.venv` directory sits next to the Gemfile, Grain uses it automatically under `bundle exec` or `bundler/setup`. Set the `PYTHON` environment variable to override the interpreter,
 then check the environment:
 
 ```console
