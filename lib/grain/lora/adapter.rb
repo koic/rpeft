@@ -11,6 +11,8 @@ module Grain
     class Adapter
       METADATA_FILE = 'grain_metadata.json'
       PEFT_CONFIG_FILE = 'adapter_config.json'
+      # Where the backend keeps checkpoints while training; see python/grain_backend/_training.py.
+      TRAINER_DIR = '.trainer'
       REPLACE_MARKERS = [METADATA_FILE, PEFT_CONFIG_FILE].freeze
 
       attr_reader :path, :base_model, :rank, :alpha, :dropout, :target_modules, :metadata
@@ -89,7 +91,7 @@ module Grain
                             '(or --model to the CLI)'
         end
 
-        merged_dir = File.expand_path(output_dir || Dir.mktmpdir('grain-merged-'))
+        merged_dir = output_dir ? Directory.prepare(output_dir, markers: Model::REPLACE_MARKERS) : Dir.mktmpdir('grain-merged-')
         result = Grain.backend.merge_lora(
           'adapter_path' => path,
           'output_dir' => merged_dir,

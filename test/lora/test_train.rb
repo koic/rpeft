@@ -188,6 +188,39 @@ class TestLoRATrain < GrainTest
     assert config['resume_from_checkpoint']
   end
 
+  def test_refuses_an_output_dir_holding_unrelated_files
+    output = File.join(@workdir, 'project')
+    FileUtils.mkdir_p(output)
+    File.write(File.join(output, 'README.md'), "# Project\n")
+
+    error = assert_raises(Grain::Error) { train(output_dir: output) }
+
+    assert_match(/not empty/, error.message)
+    assert_equal "# Project\n", File.read(File.join(output, 'README.md'))
+    assert_empty @backend.calls
+  end
+
+  def test_trains_into_an_existing_empty_output_dir
+    output = File.join(@workdir, 'empty')
+    FileUtils.mkdir_p(output)
+
+    assert_equal output, train(output_dir: output).path
+  end
+
+  def test_trains_again_into_an_adapter_it_saved_before
+    output = File.join(@workdir, 'adapter')
+    train(output_dir: output)
+
+    assert_equal output, train(output_dir: output).path
+  end
+
+  def test_resumes_into_the_output_dir_of_an_interrupted_run
+    output = File.join(@workdir, 'interrupted')
+    FileUtils.mkdir_p(File.join(output, '.trainer', 'checkpoint-1'))
+
+    assert_equal output, train(output_dir: output, checkpoints: true, resume: true).path
+  end
+
   def test_rejects_resume_without_an_explicit_output_dir
     error = assert_raises(Grain::ConfigurationError) {
       Grain::LoRA.train(model: 'fake/model', dataset: @dataset, resume: true)

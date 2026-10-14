@@ -118,6 +118,26 @@ class TestLoRAAdapter < GrainTest
     assert_equal 'fake/model', metadata['base_model']
   end
 
+  def test_merge_refuses_an_output_dir_holding_unrelated_files
+    output = File.join(@workdir, 'app')
+    FileUtils.mkdir_p(output)
+    File.write(File.join(output, 'config.json'), %({"app": "settings"}))
+
+    error = assert_raises(Grain::Error) { new_adapter.merge(output_dir: output) }
+
+    assert_match(/not empty/, error.message)
+    assert_equal %({"app": "settings"}), File.read(File.join(output, 'config.json'))
+    refute File.exist?(File.join(output, 'grain_metadata.json'))
+    assert_empty @backend.calls
+  end
+
+  def test_merge_writes_again_into_a_model_it_merged_before
+    output = File.join(@workdir, 'merged')
+    new_adapter.merge(output_dir: output)
+
+    assert_equal output, new_adapter.merge(output_dir: output).path
+  end
+
   def test_merge_uses_a_temporary_directory_by_default
     model = new_adapter.merge
 

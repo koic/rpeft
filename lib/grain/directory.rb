@@ -27,6 +27,19 @@ module Grain
       dest
     end
 
+    # Makes dir ready to be written into, under the same rule as move: it must be missing, empty,
+    # or an artifact Grain saved there before.
+    def prepare(dir, markers:)
+      dir = File.expand_path(dir)
+      if File.exist?(dir) && !(File.directory?(dir) && (Dir.empty?(dir) || replaceable?(dir, markers)))
+        raise Error, "output directory is not empty: #{dir} (Grain only writes into empty directories " \
+                     'or ones it previously wrote; remove it or pick another path)'
+      end
+
+      FileUtils.mkdir_p(dir)
+      dir
+    end
+
     def replaceable?(dest, markers)
       markers.any? { |marker| File.exist?(File.join(dest, marker)) }
     end

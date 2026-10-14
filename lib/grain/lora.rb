@@ -33,8 +33,8 @@ module Grain
         validate_resume(resume, output_dir)
         training_dataset = Dataset.coerce(dataset)
         evaluation_dataset = coerce_eval_dataset(eval_dataset, training_dataset)
-        resolved_device = Device.resolve(device)
         adapter_dir = prepare_output_dir(output_dir)
+        resolved_device = Device.resolve(device)
 
         options[:eval_dataset] = evaluation_dataset
         result = Grain.backend.train_lora(
@@ -105,10 +105,10 @@ module Grain
       end
 
       def prepare_output_dir(output_dir)
-        dir = File.expand_path(output_dir || Dir.mktmpdir('grain-adapter-'))
-        FileUtils.mkdir_p(dir)
+        return Dir.mktmpdir('grain-adapter-') unless output_dir
 
-        dir
+        # TRAINER_DIR marks a run that stopped before saving the adapter, which resume: true picks up.
+        Directory.prepare(output_dir, markers: [*Adapter::REPLACE_MARKERS, Adapter::TRAINER_DIR])
       end
 
       def request_payload(model, dataset, adapter_dir, device, options)
