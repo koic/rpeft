@@ -108,6 +108,16 @@ class TestLoRAAdapter < GrainTest
     assert_equal 'fake/model', config['base_model']
   end
 
+  def test_merge_marks_the_merged_model_so_a_later_save_can_replace_it
+    merged_dir = File.join(@workdir, 'merged')
+
+    new_adapter.merge(output_dir: merged_dir)
+
+    metadata = JSON.parse(File.read(File.join(merged_dir, 'grain.json')))
+    assert_equal 'merged_model', metadata['kind']
+    assert_equal 'fake/model', metadata['base_model']
+  end
+
   def test_merge_uses_a_temporary_directory_by_default
     model = new_adapter.merge
 

@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require 'fileutils'
 require 'json'
 require 'tmpdir'
 
@@ -95,7 +96,12 @@ module Grain
           'base_model' => base_model
         )
 
-        Model.new(path: result['model_path'] || merged_dir, base_model: result['base_model'] || base_model)
+        model_dir = result['model_path'] || merged_dir
+        merged_base_model = result['base_model'] || base_model
+        FileUtils.mkdir_p(model_dir)
+        Model.write_metadata(model_dir, base_model: merged_base_model)
+
+        Model.new(path: model_dir, base_model: merged_base_model)
       end
 
       # Generates with the adapter applied on top of the base model, without merging.

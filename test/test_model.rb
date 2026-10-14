@@ -44,7 +44,7 @@ class TestModel < GrainTest
   def test_save_replaces_a_previously_saved_model
     dest = File.join(@workdir, 'saved')
     FileUtils.mkdir_p(dest)
-    File.write(File.join(dest, 'config.json'), '{}')
+    Grain::Model.write_metadata(dest, base_model: 'fake/model')
     File.write(File.join(dest, 'stale'), 'old')
     model = Grain::Model.new(path: @model_dir)
 
@@ -52,6 +52,27 @@ class TestModel < GrainTest
 
     assert_path_exists File.join(dest, 'config.json')
     refute File.exist?(File.join(dest, 'stale'))
+  end
+
+  def test_save_refuses_to_overwrite_a_directory_that_only_has_a_config_json
+    dest = File.join(@workdir, 'app')
+    FileUtils.mkdir_p(dest)
+    File.write(File.join(dest, 'config.json'), '{}')
+    model = Grain::Model.new(path: @model_dir)
+
+    assert_raises(Grain::Error) do
+      model.save(dest)
+    end
+    assert_path_exists File.join(dest, 'config.json')
+  end
+
+  def test_write_metadata_marks_a_merged_model
+    Grain::Model.write_metadata(@model_dir, base_model: 'fake/model')
+
+    metadata = JSON.parse(File.read(File.join(@model_dir, 'grain.json')))
+
+    assert_equal 'merged_model', metadata['kind']
+    assert_equal 'fake/model', metadata['base_model']
   end
 
   def test_keeps_a_hub_model_id_verbatim

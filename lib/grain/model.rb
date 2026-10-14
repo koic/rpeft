@@ -1,12 +1,30 @@
 # frozen_string_literal: true
 
+require 'json'
+require 'time'
+
 module Grain
   # A full model: either a local directory (typically the result of merging a LoRA adapter)
   # or a Hugging Face Hub model id.
   class Model
-    REPLACE_MARKERS = %w(config.json).freeze
+    METADATA_FILE = 'grain.json'
+    # Not config.json: it is a common name outside model directories, and a mistyped save destination
+    # holding one would otherwise be deleted.
+    REPLACE_MARKERS = [METADATA_FILE].freeze
 
     attr_reader :path, :base_model
+
+    # Marks dir as a merged model saved by Grain, which is what lets a later #save replace it.
+    def self.write_metadata(dir, base_model:)
+      metadata = {
+        'schema_version' => 1,
+        'grain_version' => VERSION,
+        'kind' => 'merged_model',
+        'base_model' => base_model,
+        'created_at' => Time.now.iso8601
+      }
+      File.write(File.join(dir, METADATA_FILE), "#{JSON.pretty_generate(metadata)}\n")
+    end
 
     def initialize(path:, base_model: nil)
       # A Hub id such as "Qwen/Qwen2.5-Coder-0.5B" must stay verbatim; only real local directories are expanded.
