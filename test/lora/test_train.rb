@@ -236,7 +236,7 @@ class TestLoRATrain < GrainTest
 
     _name, config = @backend.calls.find { |call| call.first == :train_lora }
 
-    assert_equal 'from memory', JSON.parse(File.readlines(config['dataset_path']).first)['text']
+    assert_equal 'from memory', JSON.parse(@backend.datasets[config['dataset_path']].first)['text']
   end
 
   def test_sends_the_text_dataset_format_by_default
@@ -264,10 +264,53 @@ class TestLoRATrain < GrainTest
     train
 
     _name, config = @backend.calls.find { |call| call.first == :train_lora }
-    first = JSON.parse(File.readlines(config['dataset_path']).first)
+    first = JSON.parse(@backend.datasets[config['dataset_path']].first)
 
     assert_includes first['text'], '### Instruction:'
     assert_includes first['text'], '### Response:'
+  end
+
+  def test_removes_the_temporary_copy_of_in_memory_records_after_training
+    Grain::LoRA.train(
+      model: 'fake/model',
+      dataset: [{text: 'from memory'}],
+      output_dir: File.join(@workdir, 'adapter')
+    )
+
+    _name, config = @backend.calls.find { |call| call.first == :train_lora }
+
+    refute File.exist?(File.dirname(config['dataset_path']))
+  end
+
+  def test_removes_the_normalized_copy_of_an_instruction_dataset_but_keeps_the_source
+    File.write(@dataset, %({"instruction":"Say hi","output":"hi"}\n))
+
+    train
+
+    _name, config = @backend.calls.find { |call| call.first == :train_lora }
+
+    refute File.exist?(File.dirname(config['dataset_path']))
+    assert_path_exists @dataset
+  end
+
+  def test_removes_the_temporary_copy_when_training_fails
+    failing = FakeBackend.new(error: Grain::TrainingError.new('boom'))
+    Grain.backend = failing
+
+    assert_raises(Grain::TrainingError) do
+      Grain::LoRA.train(model: 'fake/model', dataset: [{text: 'x'}], output_dir: File.join(@workdir, 'adapter'), device: :cpu)
+    end
+    refute File.exist?(File.dirname(failing.datasets.keys.first))
+  end
+
+  def test_keeps_the_temporary_copy_of_a_dataset_object_given_by_the_caller
+    dataset = Grain::Dataset.from_records([{text: 'reused'}])
+
+    Grain::LoRA.train(model: 'fake/model', dataset: dataset, output_dir: File.join(@workdir, 'adapter'))
+
+    assert_path_exists dataset.path
+  ensure
+    dataset&.discard
   end
 
   def test_raises_when_the_dataset_lines_lack_a_text_key

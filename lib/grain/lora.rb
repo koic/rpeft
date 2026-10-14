@@ -49,6 +49,10 @@ module Grain
           options: options,
           result: result
         )
+      ensure
+        # Datasets given as Dataset objects belong to the caller and may be reused for another run.
+        training_dataset.discard if training_dataset && !training_dataset.equal?(dataset)
+        evaluation_dataset.discard if evaluation_dataset && !evaluation_dataset.equal?(eval_dataset)
       end
 
       private

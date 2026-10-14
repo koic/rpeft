@@ -4,12 +4,15 @@
 # every call in #calls, returns canned responses that can be
 # overridden per method via responses:, and raises error: when set.
 class FakeBackend
-  attr_reader :calls
+  # datasets maps each dataset path passed to train_lora to its lines at call time, because Grain removes
+  # its temporary copies once training returns.
+  attr_reader :calls, :datasets
 
   def initialize(responses: {}, error: nil)
     @responses = responses
     @error = error
     @calls = []
+    @datasets = {}
   end
 
   def self.healthy_diagnostics
@@ -32,6 +35,9 @@ class FakeBackend
   end
 
   def train_lora(config)
+    [config['dataset_path'], config['eval_dataset_path']].compact.each do |path|
+      @datasets[path] = File.readlines(path) if File.file?(path)
+    end
     record(:train_lora, config)
     @responses.fetch(:train_lora) do
       {

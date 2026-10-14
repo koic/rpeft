@@ -112,4 +112,23 @@ class TestLoRAIntegration < Minitest::Test
 
     assert_instance_of String, reply
   end
+
+  def test_lora_train_writes_no_copy_of_the_dataset_into_the_datasets_cache
+    Grain.check
+    cache = PyCall.import_module('datasets.config').HF_DATASETS_CACHE.to_s
+    before = Dir.glob(File.join(cache, '**', '*.arrow'))
+
+    Grain::LoRA.train(
+      model: TINY_MODEL,
+      dataset: @dataset,
+      output_dir: File.join(@workdir, 'adapter'),
+      rank: 2,
+      epochs: 1,
+      batch_size: 2,
+      max_length: 64,
+      device: :cpu
+    )
+
+    assert_equal before, Dir.glob(File.join(cache, '**', '*.arrow'))
+  end
 end

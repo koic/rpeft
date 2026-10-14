@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require 'fileutils'
 require 'json'
 require 'tmpdir'
 
@@ -22,7 +23,8 @@ module Grain
     # Builds a dataset from Ruby records (Hashes in any of the three formats, Symbol keys included)
     # by writing them to a temporary JSONL file, so in-memory data needs no intermediate file of its own.
     def self.from_records(records)
-      path = File.join(Dir.mktmpdir('grain-dataset-'), 'records.jsonl')
+      dir = Dir.mktmpdir('grain-dataset-')
+      path = File.join(dir, 'records.jsonl')
       written = 0
 
       File.open(path, 'w') do |out|
@@ -35,18 +37,30 @@ module Grain
       end
       raise DatasetError, 'dataset is empty: no records were given' if written.zero?
 
-      new(path, name: nil)
+      new(path, name: nil, temporary_dir: dir)
+    rescue StandardError
+      FileUtils.rm_rf(dir)
+      raise
     end
 
     # name is the file name the dataset came from, recorded in the adapter metadata;
     # nil for in-memory records, which have no file of their own.
     attr_reader :path, :format, :name
 
-    def initialize(source, name: File.basename(source.to_s))
+    def initialize(source, name: File.basename(source.to_s), temporary_dir: nil)
       @name = name
+      @temporary_dirs = [temporary_dir].compact
       source_path = existing_file(source)
       @format = detect_format(source_path)
       @path = @format == :instruction ? normalize(source_path) : source_path
+    end
+
+    # Removes the temporary copies this dataset wrote for the backend. The source file is left alone.
+    def discard
+      @temporary_dirs.each do |dir|
+        FileUtils.rm_rf(dir)
+      end
+      @temporary_dirs.clear
     end
 
     # The format the backend sees. Instruction datasets are normalized to text here,
@@ -101,7 +115,9 @@ module Grain
     # Rewrites a non-text dataset into text-format JSONL in
     # a temporary directory, so the backend only ever sees one format.
     def normalize(source_path)
-      normalized = File.join(Dir.mktmpdir('grain-dataset-'), File.basename(source_path))
+      dir = Dir.mktmpdir('grain-dataset-')
+      @temporary_dirs << dir
+      normalized = File.join(dir, File.basename(source_path))
 
       File.open(normalized, 'w') do |out|
         File.foreach(source_path).with_index(1) do |line, lineno|
@@ -113,6 +129,9 @@ module Grain
       end
 
       normalized
+    rescue StandardError
+      discard
+      raise
     end
 
     def render_instruction(record, lineno, source_path)
