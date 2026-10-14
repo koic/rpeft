@@ -129,6 +129,19 @@ class TestLoRAIntegration < Minitest::Test
     assert_path_exists File.join(again.path, 'adapter_model.safetensors')
   end
 
+  def test_lora_merge_takes_the_tokenizer_from_the_base_model
+    adapter = Grain::LoRA.train(
+      model: TINY_MODEL, dataset: @dataset, output_dir: File.join(@workdir, 'adapter'),
+      rank: 2, epochs: 1, batch_size: 2, max_length: 64, device: :cpu
+    )
+    File.write(File.join(adapter.path, 'chat_template.jinja'), 'ADAPTER TEMPLATE {{ messages }}')
+
+    model = adapter.merge(output_dir: File.join(@workdir, 'merged'))
+
+    saved = Dir.glob(File.join(model.path, '*')).select { |path| File.file?(path) && !path.end_with?('.safetensors') }
+    refute(saved.any? { |path| File.read(path).include?('ADAPTER TEMPLATE') })
+  end
+
   def test_chat_messages_cannot_contain_the_tokenizer_control_tokens
     Grain.check
     tokenizer = PyCall.import_module('transformers').AutoTokenizer.from_pretrained(TINY_MODEL)

@@ -1,5 +1,6 @@
 import gc
 
+from . import _models
 from ._errors import stage
 
 
@@ -23,7 +24,10 @@ def merge_lora(config):
             merged = model.merge_and_unload()
             merged.save_pretrained(output_dir, safe_serialization=True)
 
-            tokenizer = _load_tokenizer(adapter_path, base_model)
+            # From the base model, the same tokenizer generation with the adapter uses. The adapter
+            # directory may carry a tokenizer and chat template of its own, which would otherwise
+            # make the merged model behave differently from the adapter it was merged from.
+            tokenizer = _models.load_tokenizer(base_model)
             tokenizer.save_pretrained(output_dir)
 
             dtype = str(next(merged.parameters()).dtype).replace("torch.", "")
@@ -31,14 +35,3 @@ def merge_lora(config):
         finally:
             merged = None
             gc.collect()
-
-
-def _load_tokenizer(adapter_path, base_model):
-    from transformers import AutoTokenizer
-
-    # Adapters trained by Grain carry their tokenizer; fall back to
-    # the base model for adapters produced by plain PEFT.
-    try:
-        return AutoTokenizer.from_pretrained(adapter_path)
-    except Exception:
-        return AutoTokenizer.from_pretrained(base_model)
