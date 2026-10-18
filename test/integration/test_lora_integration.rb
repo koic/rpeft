@@ -50,6 +50,7 @@ class TestLoRAIntegration < Minitest::Test
     assert_path_exists File.join(adapter.path, 'adapter_config.json')
     assert_path_exists File.join(adapter.path, 'adapter_model.safetensors')
     assert_path_exists File.join(adapter.path, 'grain_metadata.json')
+    refute File.exist?(File.join(adapter.path, 'tokenizer_config.json'))
     assert_kind_of Numeric, adapter.metadata.dig('training', 'train_loss')
     assert_equal 'cpu', adapter.metadata.dig('training', 'device')
     refute_empty adapter.target_modules

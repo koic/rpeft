@@ -49,7 +49,6 @@ def train_lora(config):
 
         with stage("adapter_save"):
             model.save_pretrained(output_dir)
-            tokenizer.save_pretrained(output_dir)
             # Checkpoints only serve resuming an interrupted run. Once the adapter is saved they would
             # just travel with it wherever the adapter directory is saved or shared.
             shutil.rmtree(_trainer_dir(output_dir), ignore_errors=True)

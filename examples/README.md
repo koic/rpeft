@@ -47,7 +47,7 @@ Training reports `trainable params: 540,672 || all params: 494,573,440 || traina
 
 - `train_and_merge.rb` is the script above.
 - `ruby_answers.jsonl` holds 40 programming questions, each answered with Ruby code only. Why its effect is easy to see is explained in the [Dataset section](../README.md#dataset).
-- `ruby-lora/` is the trained adapter. Its weights in `adapter_model.safetensors` are about 2 MB; the rest is the tokenizer and metadata.
+- `ruby-lora/` is the trained adapter: its weights in `adapter_model.safetensors`, about 2 MB, plus its configuration and metadata.
 - `ruby-model/` is the merged model, about 1 GB, which runs without the adapter.
 
 `ruby-lora/` and `ruby-model/` are created by the script and ignored by git.
