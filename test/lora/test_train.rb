@@ -136,6 +136,22 @@ class TestLoRATrain < GrainTest
     assert_raises(Grain::ConfigurationError) { train(epochs: 0) }
   end
 
+  def test_rejects_wrong_argument_types_before_calling_the_backend
+    assert_raises(Grain::ConfigurationError) do
+      Grain::LoRA.train(model: nil, dataset: @dataset)
+    end
+    assert_raises(Grain::ConfigurationError) do
+      Grain::LoRA.train(model: 'fake/model', dataset: 42)
+    end
+    assert_raises(Grain::ConfigurationError) do
+      train(output_dir: 42)
+    end
+    assert_raises(Grain::ConfigurationError) do
+      train(device: nil)
+    end
+    assert_empty @backend.calls
+  end
+
   def test_rejects_an_unknown_device
     error = assert_raises(Grain::ConfigurationError) { train(device: :tpu) }
 

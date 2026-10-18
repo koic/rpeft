@@ -210,6 +210,50 @@ class TestModel < GrainTest
     assert_empty @backend.calls
   end
 
+  def test_rejects_a_missing_path
+    assert_raises(Grain::ConfigurationError) { Grain::Model.new(path: nil) }
+  end
+
+  def test_accepts_a_pathname
+    assert_equal @model_dir, Grain::Model.new(path: Pathname(@model_dir)).path
+  end
+
+  def test_save_rejects_a_missing_destination
+    model = Grain::Model.new(path: @model_dir)
+
+    assert_raises(Grain::ConfigurationError) do
+      model.save(nil)
+    end
+    assert_path_exists @model_dir
+  end
+
+  def test_generate_rejects_a_missing_prompt_before_calling_the_backend
+    model = Grain::Model.new(path: @model_dir)
+
+    assert_raises(Grain::ConfigurationError) do
+      model.generate(nil)
+    end
+    assert_raises(Grain::ConfigurationError) do
+      model.generate('')
+    end
+    assert_raises(Grain::ConfigurationError) do
+      model.generate(42)
+    end
+    assert_empty @backend.calls
+  end
+
+  def test_generate_rejects_a_nil_device_as_a_configuration_error
+    model = Grain::Model.new(path: @model_dir)
+
+    assert_raises(Grain::ConfigurationError) { model.generate('User: hi', device: nil) }
+  end
+
+  def test_generate_accepts_a_device_given_as_a_string
+    Grain::Model.new(path: @model_dir).generate('User: hi', device: 'mps')
+
+    assert_equal 'mps', @backend.calls.last.last['device']
+  end
+
   def test_chat_accepts_the_system_user_and_assistant_roles
     model = Grain::Model.new(path: @model_dir)
 

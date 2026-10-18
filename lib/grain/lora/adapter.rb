@@ -19,7 +19,7 @@ module Grain
 
       class << self
         def load(path, base_model: nil)
-          dir = File.expand_path(path)
+          dir = File.expand_path(Arguments.path(path, 'path'))
           metadata_file = File.join(dir, METADATA_FILE)
           peft_file = File.join(dir, PEFT_CONFIG_FILE)
 
@@ -79,7 +79,7 @@ module Grain
       end
 
       def save(dest)
-        @path = Directory.move(@path, dest, replace_markers: REPLACE_MARKERS)
+        @path = Directory.move(@path, Arguments.path(dest, 'dest'), replace_markers: REPLACE_MARKERS)
         self
       end
 
@@ -91,6 +91,7 @@ module Grain
                             '(or --model to the CLI)'
         end
 
+        output_dir = Arguments.path(output_dir, 'output_dir') if output_dir
         empty_dir = output_dir && File.directory?(output_dir) && Dir.empty?(output_dir)
         fresh = output_dir.nil? || !File.exist?(output_dir) || empty_dir
         merged_dir = output_dir ? Directory.prepare(output_dir, markers: Model::REPLACE_MARKERS) : Dir.mktmpdir('grain-merged-')

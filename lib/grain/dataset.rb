@@ -17,7 +17,7 @@ module Grain
       return value if value.is_a?(Dataset)
       return from_records(value) if value.is_a?(Enumerable)
 
-      new(value)
+      new(Arguments.path(value, 'dataset'))
     end
 
     # Builds a dataset from Ruby records (Hashes in any of the three formats, Symbol keys included)

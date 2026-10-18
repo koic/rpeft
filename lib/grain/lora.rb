@@ -30,6 +30,8 @@ module Grain
           checkpoints: checkpoints,
           resume: resume
         }
+        model = Arguments.path(model, 'model')
+        output_dir = Arguments.path(output_dir, 'output_dir') if output_dir
         validate_options(options)
         validate_resume(resume, output_dir)
         training_dataset = Dataset.coerce(dataset)

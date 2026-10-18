@@ -27,13 +27,14 @@ module Grain
     end
 
     def initialize(path:, base_model: nil)
+      path = Arguments.path(path, 'path')
       # A Hub id such as "Qwen/Qwen2.5-Coder-0.5B" must stay verbatim; only real local directories are expanded.
-      @path = File.directory?(path) ? File.expand_path(path) : path.to_s
+      @path = File.directory?(path) ? File.expand_path(path) : path
       @base_model = base_model
     end
 
     def save(dest)
-      @path = Directory.move(@path, dest, replace_markers: REPLACE_MARKERS)
+      @path = Directory.move(@path, Arguments.path(dest, 'dest'), replace_markers: REPLACE_MARKERS)
       self
     end
 

@@ -33,7 +33,11 @@ module Grain
     end
 
     def input_for(prompt, messages)
-      return {'prompt' => prompt} unless messages
+      unless messages
+        return {'prompt' => prompt} if prompt.is_a?(String) && !prompt.empty?
+
+        raise ConfigurationError, "prompt must be a non-empty String, got #{prompt.inspect}"
+      end
       return {'messages' => messages} if Messages.valid?(messages)
 
       raise ConfigurationError, "messages must be a non-empty Array of Hashes with a role of system, user, or assistant and String content, got #{messages.inspect}"

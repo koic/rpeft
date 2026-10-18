@@ -2,6 +2,7 @@
 
 require_relative 'grain/version'
 require_relative 'grain/errors'
+require_relative 'grain/arguments'
 require_relative 'grain/device'
 require_relative 'grain/directory'
 require_relative 'grain/dataset'
