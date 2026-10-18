@@ -90,11 +90,7 @@ def _apply_lora(model, lora):
 
 
 def _build_trainer(model, tokenizer, dataset, eval_dataset, config, device, dtype):
-    from transformers import (
-        DataCollatorForLanguageModeling,
-        Trainer,
-        TrainingArguments,
-    )
+    from transformers import Trainer, TrainingArguments
 
     args = TrainingArguments(
         output_dir=_trainer_dir(config["output_dir"]),
@@ -118,7 +114,7 @@ def _build_trainer(model, tokenizer, dataset, eval_dataset, config, device, dtyp
         args=args,
         train_dataset=dataset,
         eval_dataset=eval_dataset,
-        data_collator=DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False),
+        data_collator=_collator(tokenizer),
     )
 
 
@@ -158,3 +154,18 @@ def _resume_point(config):
     # A finished run removes its checkpoints, so there may be nothing to resume; train from the start then.
     trainer_dir = _trainer_dir(config["output_dir"])
     return get_last_checkpoint(trainer_dir) if os.path.isdir(trainer_dir) else None
+
+
+def _collator(tokenizer):
+    # DataCollatorForLanguageModeling ignores every position holding the pad token. Tokenizers without
+    # a pad token of their own pad with EOS (see _models.load_tokenizer), and many that have one reuse
+    # EOS too, so the EOS that ends each example would never be learned. Only the padding the batch
+    # added is ignored here, found through the attention mask instead of the token id.
+    def collate(features):
+        batch = tokenizer.pad(features, return_tensors="pt")
+        labels = batch["input_ids"].clone()
+        labels[batch["attention_mask"] == 0] = -100
+        batch["labels"] = labels
+        return batch
+
+    return collate

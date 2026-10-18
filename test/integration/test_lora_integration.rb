@@ -164,6 +164,27 @@ class TestLoRAIntegration < Minitest::Test
     assert_equal 1, ids.count(tokenizer.bos_token_id)
   end
 
+  def test_text_examples_end_with_an_eos_the_model_is_trained_on
+    Grain.check
+    tokenizer = PyCall.import_module('grain_backend._models').load_tokenizer(TINY_MODEL)
+    data = PyCall.import_module('grain_backend._data')
+    training = PyCall.import_module('grain_backend._training')
+    path = File.join(@workdir, 'texts.jsonl')
+    File.write(path, "#{{text: 'hi'}.to_json}\n#{{text: 'a longer example text'}.to_json}\n")
+    dataset = data.load_tokenized_dataset(path, tokenizer, 'text', 64, 'text')
+    short = dataset[0]['input_ids'].to_a
+
+    batch = training._collator(tokenizer).call([dataset[0], dataset[1]])
+    labels = batch['labels'][0].tolist.to_a
+    mask = batch['attention_mask'][0].tolist.to_a
+    # Located through the attention mask, since this tokenizer pads on the left.
+    real = mask.each_index.select { |i| mask[i] == 1 }
+
+    assert_equal tokenizer.eos_token_id, short.last
+    assert_equal tokenizer.eos_token_id, labels[real.last]
+    assert((mask.each_index.to_a - real).all? { |i| labels[i] == -100 })
+  end
+
   def test_chat_messages_cannot_contain_the_tokenizer_control_tokens
     Grain.check
     tokenizer = PyCall.import_module('transformers').AutoTokenizer.from_pretrained(TINY_MODEL)

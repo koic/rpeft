@@ -20,6 +20,10 @@ def load_tokenized_dataset(path, tokenizer, text_field, max_length, dataset_form
             )
 
         add_special_tokens = not (dataset_format == "messages" and _chat.writes_special_tokens(tokenizer))
+        # A chat template closes every turn with its own end marker. Plain text has none, so without an EOS
+        # the model never sees where an answer ends and keeps generating until max_new_tokens.
+        eos = tokenizer.eos_token_id if dataset_format != "messages" else None
+        content_length = max_length - 1 if eos is not None else max_length
 
         def tokenize(batch):
             if dataset_format == "messages":
@@ -28,9 +32,14 @@ def load_tokenized_dataset(path, tokenizer, text_field, max_length, dataset_form
                 texts = batch[field]
 
             # No padding here: the collator pads each batch dynamically.
-            return tokenizer(
-                texts, truncation=True, max_length=max_length, add_special_tokens=add_special_tokens
+            encoded = tokenizer(
+                texts, truncation=True, max_length=content_length, add_special_tokens=add_special_tokens
             )
+            if eos is not None:
+                for input_ids, attention_mask in zip(encoded["input_ids"], encoded["attention_mask"]):
+                    input_ids.append(eos)
+                    attention_mask.append(1)
+            return encoded
 
         return dataset.map(
             tokenize, batched=True, remove_columns=dataset.column_names, keep_in_memory=True
