@@ -96,7 +96,7 @@ module Grain
     def validate_messages(messages, path)
       return if Messages.valid?(messages)
 
-      raise DatasetError, "\"messages\" must be a non-empty array of objects with \"role\" and \"content\" strings: #{path}"
+      raise DatasetError, "\"messages\" must be a non-empty array of objects with a \"role\" of system, user, or assistant and a \"content\" string: #{path}"
     end
 
     def first_record(path)

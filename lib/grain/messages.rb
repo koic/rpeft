@@ -8,6 +8,10 @@ module Grain
   # String and Symbol keys are both accepted, since transcripts read from JSONL have
   # String keys while ones written in Ruby naturally have Symbol keys.
   module Messages
+    # Chat templates write the role into the prompt as is, and some drop turns whose role they do not know,
+    # so only the roles every template understands are accepted.
+    ROLES = %w(system user assistant).freeze
+
     module_function
 
     def valid?(messages)
@@ -19,7 +23,7 @@ module Grain
         role = message['role'] || message[:role]
         content = message['content'] || message[:content]
 
-        role.is_a?(String) && content.is_a?(String)
+        ROLES.include?(role) && content.is_a?(String)
       }
     end
   end

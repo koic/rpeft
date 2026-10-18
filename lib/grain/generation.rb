@@ -36,7 +36,7 @@ module Grain
       return {'prompt' => prompt} unless messages
       return {'messages' => messages} if Messages.valid?(messages)
 
-      raise ConfigurationError, "messages must be a non-empty Array of Hashes with String role and content, got #{messages.inspect}"
+      raise ConfigurationError, "messages must be a non-empty Array of Hashes with a role of system, user, or assistant and String content, got #{messages.inspect}"
     end
 
     def validate(max_new_tokens, temperature, top_p, seed)

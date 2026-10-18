@@ -4,6 +4,7 @@ def render(tokenizer, messages, add_generation_prompt=False):
     add_generation_prompt marks where the assistant's turn begins. It belongs to
     inference only: training renders the transcript as written.
     """
+    _check_roles(messages)
     messages = _without_control_tokens(tokenizer, messages)
     if getattr(tokenizer, "chat_template", None):
         return tokenizer.apply_chat_template(
@@ -28,6 +29,19 @@ def writes_special_tokens(tokenizer):
     fallback rendering writes none.
     """
     return bool(getattr(tokenizer, "chat_template", None))
+
+
+# Kept in step with Grain::Messages::ROLES. The Ruby side checks only the first line of a dataset file,
+# so the rest of the file is checked here.
+ROLES = ("system", "user", "assistant")
+
+
+def _check_roles(messages):
+    for message in messages:
+        if message.get("role") not in ROLES:
+            raise ValueError(
+                "message role must be one of %s, got %r" % (", ".join(ROLES), message.get("role"))
+            )
 
 
 def _without_control_tokens(tokenizer, messages):

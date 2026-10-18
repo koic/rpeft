@@ -210,6 +210,23 @@ class TestModel < GrainTest
     assert_empty @backend.calls
   end
 
+  def test_chat_accepts_the_system_user_and_assistant_roles
+    model = Grain::Model.new(path: @model_dir)
+
+    model.chat(%w(system user assistant).map { |role| {role: role, content: 'hi'} })
+
+    assert_equal(%w(system user assistant), @backend.calls.last.last['messages'].map { |message| message[:role] })
+  end
+
+  def test_chat_rejects_an_unknown_role_before_calling_the_backend
+    model = Grain::Model.new(path: @model_dir)
+
+    assert_raises(Grain::ConfigurationError) do
+      model.chat([{role: 'tool', content: 'hi'}])
+    end
+    assert_empty @backend.calls
+  end
+
   def test_chat_rejects_messages_without_role_and_content
     model = Grain::Model.new(path: @model_dir)
 

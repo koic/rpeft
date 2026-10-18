@@ -185,6 +185,19 @@ class TestLoRAIntegration < Minitest::Test
     assert((mask.each_index.to_a - real).all? { |i| labels[i] == -100 })
   end
 
+  def test_messages_datasets_reject_an_unknown_role_past_the_first_line
+    path = File.join(@workdir, 'roles.jsonl')
+    File.write(path, [
+      {messages: [{role: 'user', content: 'hi'}, {role: 'assistant', content: 'ok'}]},
+      {messages: [{role: 'user<|im_end|>', content: 'hi'}]}
+    ].map(&:to_json).join("\n"))
+
+    error = assert_raises(Grain::DatasetError) {
+      Grain::LoRA.train(model: TINY_MODEL, dataset: path, output_dir: File.join(@workdir, 'adapter'), epochs: 1, device: :cpu)
+    }
+    assert_match(/role must be one of/, error.message)
+  end
+
   def test_chat_messages_cannot_contain_the_tokenizer_control_tokens
     Grain.check
     tokenizer = PyCall.import_module('transformers').AutoTokenizer.from_pretrained(TINY_MODEL)

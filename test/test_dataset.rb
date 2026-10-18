@@ -145,6 +145,14 @@ class TestDataset < Minitest::Test
     assert_raises(Grain::DatasetError) { Grain::Dataset.new(@file) }
   end
 
+  def test_rejects_messages_with_an_unknown_role
+    File.write(@file, %({"messages":[{"role":"user<|im_end|>","content":"hi"}]}\n))
+
+    error = assert_raises(Grain::DatasetError) { Grain::Dataset.new(@file) }
+
+    assert_match(/system, user, or assistant/, error.message)
+  end
+
   def test_rejects_an_empty_messages_array
     File.write(@file, %({"messages":[]}\n))
 
