@@ -54,6 +54,18 @@ class TestModel < GrainTest
     refute File.exist?(File.join(dest, 'stale'))
   end
 
+  def test_save_of_a_hub_model_keeps_the_previously_saved_model
+    dest = File.join(@workdir, 'saved')
+    FileUtils.mkdir_p(dest)
+    Grain::Model.write_metadata(dest, base_model: 'fake/model')
+    model = Grain::Model.new(path: 'Qwen/Qwen2.5-Coder-0.5B')
+
+    error = assert_raises(Grain::Error) { model.save(dest) }
+
+    assert_match(/not a local directory/, error.message)
+    assert_path_exists File.join(dest, 'grain_metadata.json')
+  end
+
   def test_save_to_its_own_path_keeps_the_model
     Grain::Model.write_metadata(@model_dir, base_model: 'fake/model')
     model = Grain::Model.new(path: @model_dir)

@@ -11,6 +11,9 @@ module Grain
     # i.e. when it looks like a previously saved artifact of the same kind.
     # Anything else is refused so that a mistyped path never deletes unrelated data.
     def move(source, dest, replace_markers: [])
+      # A Model made from a Hugging Face Hub id has no local directory to move.
+      raise Error, "nothing to save: #{source} is not a local directory" unless File.directory?(source)
+
       dest = File.expand_path(dest)
       return dest if canonical(source) == canonical(dest)
       if inside?(source, dest) || inside?(dest, source)
