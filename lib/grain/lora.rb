@@ -101,6 +101,8 @@ module Grain
         dataset = Dataset.coerce(eval_dataset)
         return dataset if dataset.backend_format == training_dataset.backend_format
 
+        # Raised before train assigns the dataset, so its ensure clause cannot discard it.
+        dataset.discard unless dataset.equal?(eval_dataset)
         raise ConfigurationError, "eval_dataset format (#{dataset.format}) must match dataset format (#{training_dataset.format})"
       end
 

@@ -260,6 +260,15 @@ class TestLoRATrain < GrainTest
     assert_match(/eval_dataset format/, error.message)
   end
 
+  def test_removes_the_temporary_copy_of_a_rejected_eval_dataset
+    before = Dir.glob(File.join(Dir.tmpdir, 'grain-dataset-*'))
+
+    assert_raises(Grain::ConfigurationError) do
+      train(eval_dataset: [{messages: [{role: 'user', content: 'hi'}]}])
+    end
+    assert_empty Dir.glob(File.join(Dir.tmpdir, 'grain-dataset-*')) - before
+  end
+
   def test_trains_from_an_array_of_records
     Grain::LoRA.train(
       model: 'fake/model',
