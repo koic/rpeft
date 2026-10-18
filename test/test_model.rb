@@ -54,6 +54,16 @@ class TestModel < GrainTest
     refute File.exist?(File.join(dest, 'stale'))
   end
 
+  def test_save_to_its_own_path_keeps_the_model
+    Grain::Model.write_metadata(@model_dir, base_model: 'fake/model')
+    model = Grain::Model.new(path: @model_dir)
+
+    model.save(@model_dir)
+
+    assert_equal @model_dir, model.path
+    assert_path_exists File.join(@model_dir, 'config.json')
+  end
+
   def test_save_refuses_to_overwrite_a_directory_that_only_has_a_config_json
     dest = File.join(@workdir, 'app')
     FileUtils.mkdir_p(dest)

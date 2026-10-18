@@ -12,6 +12,11 @@ module Grain
     # Anything else is refused so that a mistyped path never deletes unrelated data.
     def move(source, dest, replace_markers: [])
       dest = File.expand_path(dest)
+      return dest if canonical(source) == canonical(dest)
+      if inside?(source, dest) || inside?(dest, source)
+        raise Error, "cannot save #{File.expand_path(source)} to #{dest}: one directory contains the other"
+      end
+
       if File.exist?(dest)
         unless replaceable?(dest, replace_markers)
           raise Error, "destination already exists: #{dest} (Grain only replaces " \
@@ -42,6 +47,20 @@ module Grain
 
     def replaceable?(dest, markers)
       markers.any? { |marker| File.exist?(File.join(dest, marker)) }
+    end
+
+    # Resolves symlinks in the part of the path that exists, so that two spellings of the same location
+    # (such as /var and /private/var on macOS) compare equal even when the last components do not exist yet.
+    def canonical(path)
+      path = File.expand_path(path)
+      return File.realpath(path) if File.exist?(path)
+
+      parent = File.dirname(path)
+      parent == path ? path : File.join(canonical(parent), File.basename(path))
+    end
+
+    def inside?(path, dir)
+      canonical(path).start_with?("#{canonical(dir).chomp(File::SEPARATOR)}#{File::SEPARATOR}")
     end
   end
 end

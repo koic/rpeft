@@ -70,6 +70,45 @@ class TestLoRAAdapter < GrainTest
     refute File.exist?(@adapter_dir)
   end
 
+  def test_save_to_its_own_path_keeps_the_adapter
+    File.write(File.join(@adapter_dir, 'grain_metadata.json'), '{}')
+    adapter = new_adapter
+
+    adapter.save(@adapter_dir)
+
+    assert_equal @adapter_dir, adapter.path
+    assert_path_exists File.join(@adapter_dir, 'grain_metadata.json')
+  end
+
+  def test_save_to_its_own_path_through_a_symlink_keeps_the_adapter
+    File.write(File.join(@adapter_dir, 'grain_metadata.json'), '{}')
+    link = File.join(@workdir, 'link')
+    File.symlink(@adapter_dir, link)
+
+    new_adapter.save(link)
+
+    assert_path_exists File.join(@adapter_dir, 'grain_metadata.json')
+  end
+
+  def test_save_refuses_a_destination_that_contains_the_adapter
+    File.write(File.join(@workdir, 'grain_metadata.json'), '{}')
+    File.write(File.join(@adapter_dir, 'dummy'), 'x')
+
+    error = assert_raises(Grain::Error) { new_adapter.save(@workdir) }
+
+    assert_match(/contains/, error.message)
+    assert_path_exists File.join(@adapter_dir, 'dummy')
+  end
+
+  def test_save_refuses_a_destination_inside_the_adapter
+    File.write(File.join(@adapter_dir, 'dummy'), 'x')
+
+    assert_raises(Grain::Error) do
+      new_adapter.save(File.join(@adapter_dir, 'nested'))
+    end
+    assert_path_exists File.join(@adapter_dir, 'dummy')
+  end
+
   def test_save_refuses_to_overwrite_an_unrelated_existing_directory
     dest = File.join(@workdir, 'existing')
     FileUtils.mkdir_p(dest)
