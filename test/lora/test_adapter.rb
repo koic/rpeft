@@ -236,7 +236,62 @@ class TestLoRAAdapter < GrainTest
     assert_empty @backend.calls
   end
 
+  def test_merge_failure_removes_its_temporary_directory
+    use_backend_failing_after_partial_merge
+    before = Dir.glob(File.join(Dir.tmpdir, 'grain-merged-*'))
+
+    assert_raises(Grain::MergeError) do
+      new_adapter.merge
+    end
+    assert_empty Dir.glob(File.join(Dir.tmpdir, 'grain-merged-*')) - before
+  end
+
+  def test_merge_failure_removes_the_output_dir_it_created_so_a_retry_works
+    use_backend_failing_after_partial_merge
+    output = File.join(@workdir, 'merged')
+
+    assert_raises(Grain::MergeError) do
+      new_adapter.merge(output_dir: output)
+    end
+    refute File.exist?(output)
+
+    Grain.backend = @backend
+    assert_equal output, new_adapter.merge(output_dir: output).path
+  end
+
+  def test_merge_failure_empties_but_keeps_an_existing_empty_output_dir
+    use_backend_failing_after_partial_merge
+    output = File.join(@workdir, 'empty')
+    FileUtils.mkdir_p(output)
+
+    assert_raises(Grain::MergeError) do
+      new_adapter.merge(output_dir: output)
+    end
+    assert_empty Dir.children(output)
+  end
+
+  def test_merge_failure_keeps_a_model_merged_there_before
+    output = File.join(@workdir, 'merged')
+    new_adapter.merge(output_dir: output)
+    use_backend_failing_after_partial_merge
+
+    assert_raises(Grain::MergeError) do
+      new_adapter.merge(output_dir: output)
+    end
+    assert_path_exists File.join(output, 'grain_metadata.json')
+  end
+
   private
+
+  # Writes part of the merged model before failing, as a merge interrupted while saving would.
+  def use_backend_failing_after_partial_merge
+    backend = FakeBackend.new
+    backend.define_singleton_method(:merge_lora) do |config|
+      File.write(File.join(config['output_dir'], 'model.safetensors'), 'partial')
+      raise Grain::MergeError, 'disk full'
+    end
+    Grain.backend = backend
+  end
 
   def new_adapter
     Grain::LoRA::Adapter.new(path: @adapter_dir, base_model: 'fake/model', rank: 8)

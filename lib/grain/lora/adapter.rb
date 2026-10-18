@@ -91,6 +91,8 @@ module Grain
                             '(or --model to the CLI)'
         end
 
+        empty_dir = output_dir && File.directory?(output_dir) && Dir.empty?(output_dir)
+        fresh = output_dir.nil? || !File.exist?(output_dir) || empty_dir
         merged_dir = output_dir ? Directory.prepare(output_dir, markers: Model::REPLACE_MARKERS) : Dir.mktmpdir('grain-merged-')
         result = Grain.backend.merge_lora(
           'adapter_path' => path,
@@ -104,6 +106,11 @@ module Grain
         Model.write_metadata(model_dir, base_model: merged_base_model)
 
         Model.new(path: model_dir, base_model: merged_base_model)
+      rescue StandardError
+        # A partial merge has weights but no marker, which would make Directory.prepare refuse the retry.
+        # Only what this merge created is removed; a model merged there before keeps its marker.
+        discard_partial_merge(merged_dir, keep_dir: empty_dir) if merged_dir && fresh
+        raise
       end
 
       # Generates with the adapter applied on top of the base model, without merging.
@@ -146,6 +153,16 @@ module Grain
         return if base_model
 
         raise GenerationError, 'base model is unknown; pass base_model: to Adapter.load (or --model to the CLI)'
+      end
+
+      def discard_partial_merge(dir, keep_dir:)
+        if keep_dir
+          Dir.children(dir).each do |child|
+            FileUtils.rm_rf(File.join(dir, child))
+          end
+        else
+          FileUtils.rm_rf(dir)
+        end
       end
     end
   end

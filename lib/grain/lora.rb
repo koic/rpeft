@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require 'fileutils'
 require 'json'
 require 'time'
 require 'tmpdir'
@@ -49,6 +50,11 @@ module Grain
           options: options,
           result: result
         )
+      rescue StandardError
+        # A temporary directory is never returned to the caller, so a failed run leaves nothing anyone could
+        # resume from. An explicit output_dir is kept for resume: true.
+        FileUtils.rm_rf(adapter_dir) if adapter_dir && output_dir.nil?
+        raise
       ensure
         # Datasets given as Dataset objects belong to the caller and may be reused for another run.
         training_dataset.discard if training_dataset && !training_dataset.equal?(dataset)

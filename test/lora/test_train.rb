@@ -345,6 +345,26 @@ class TestLoRATrain < GrainTest
     refute File.exist?(File.dirname(failing.datasets.keys.first))
   end
 
+  def test_failed_training_removes_its_temporary_adapter_directory
+    Grain.backend = FakeBackend.new(error: Grain::TrainingError.new('boom'))
+    before = Dir.glob(File.join(Dir.tmpdir, 'grain-adapter-*'))
+
+    assert_raises(Grain::TrainingError) do
+      Grain::LoRA.train(model: 'fake/model', dataset: @dataset, device: :cpu)
+    end
+    assert_empty Dir.glob(File.join(Dir.tmpdir, 'grain-adapter-*')) - before
+  end
+
+  def test_failed_training_keeps_an_explicit_output_dir_for_resuming
+    Grain.backend = FakeBackend.new(error: Grain::TrainingError.new('boom'))
+    output = File.join(@workdir, 'adapter')
+
+    assert_raises(Grain::TrainingError) do
+      train(output_dir: output, device: :cpu)
+    end
+    assert_path_exists output
+  end
+
   def test_keeps_the_temporary_copy_of_a_dataset_object_given_by_the_caller
     dataset = Grain::Dataset.from_records([{text: 'reused'}])
 
