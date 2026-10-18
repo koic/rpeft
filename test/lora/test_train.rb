@@ -136,6 +136,25 @@ class TestLoRATrain < GrainTest
     assert_raises(Grain::ConfigurationError) { train(epochs: 0) }
   end
 
+  def test_records_a_local_base_model_as_an_absolute_path
+    FileUtils.mkdir_p(File.join(@workdir, 'models', 'base'))
+
+    adapter = Dir.chdir(@workdir) { train(model: 'models/base') }
+
+    _name, config = @backend.calls.find { |call| call.first == :train_lora }
+    expected = File.join(File.realpath(@workdir), 'models', 'base')
+    assert_equal expected, File.realpath(config['base_model'])
+    assert_equal config['base_model'], adapter.base_model
+    assert_equal config['base_model'], adapter.metadata['base_model']
+  end
+
+  def test_keeps_a_hub_model_id_verbatim
+    train(model: 'Qwen/Qwen2.5-Coder-0.5B')
+
+    _name, config = @backend.calls.find { |call| call.first == :train_lora }
+    assert_equal 'Qwen/Qwen2.5-Coder-0.5B', config['base_model']
+  end
+
   def test_rejects_wrong_argument_types_before_calling_the_backend
     assert_raises(Grain::ConfigurationError) do
       Grain::LoRA.train(model: nil, dataset: @dataset)

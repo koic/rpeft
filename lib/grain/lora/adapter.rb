@@ -20,6 +20,7 @@ module Grain
       class << self
         def load(path, base_model: nil)
           dir = File.expand_path(Arguments.path(path, 'path'))
+          base_model = Arguments.model(base_model, 'base_model') if base_model
           metadata_file = File.join(dir, METADATA_FILE)
           peft_file = File.join(dir, PEFT_CONFIG_FILE)
 

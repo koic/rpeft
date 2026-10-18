@@ -17,5 +17,13 @@ module Grain
 
       raise ConfigurationError, "#{name} must be a non-empty String or Pathname, got #{value.inspect}"
     end
+
+    # A base model: a Hub id is kept verbatim, while a local directory is made absolute. The model is
+    # recorded in the adapter and loaded again later, possibly from another directory, where a relative
+    # path would name something else.
+    def model(value, name)
+      model = path(value, name)
+      File.directory?(model) ? File.expand_path(model) : model
+    end
   end
 end
