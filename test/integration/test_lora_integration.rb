@@ -142,6 +142,16 @@ class TestLoRAIntegration < Minitest::Test
     refute(saved.any? { |path| File.read(path).include?('ADAPTER TEMPLATE') })
   end
 
+  def test_backend_results_with_non_finite_numbers_stay_parsable
+    Grain.check
+    backend = PyCall.import_module('grain_backend')
+
+    # Wrapped in an Array because PyCall passes a trailing Hash as keyword arguments.
+    json = backend._dumps([{'final_loss' => Float::NAN, 'eval_loss' => Float::INFINITY, 'steps' => 4}]).to_s
+
+    assert_equal([{'final_loss' => nil, 'eval_loss' => nil, 'steps' => 4}], JSON.parse(json))
+  end
+
   def test_chat_messages_cannot_contain_the_tokenizer_control_tokens
     Grain.check
     tokenizer = PyCall.import_module('transformers').AutoTokenizer.from_pretrained(TINY_MODEL)

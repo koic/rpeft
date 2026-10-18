@@ -10,10 +10,27 @@ missing instead of failing.
 """
 
 import json
+import math
 import os
 import sys
 
 __version__ = "0.1.0"
+
+
+def _dumps(value):
+    # json.dumps writes NaN and Infinity, which are not JSON and which the Ruby side cannot parse.
+    # A diverged run reports such losses, so they cross as null rather than failing the whole call.
+    return json.dumps(_finite(value), allow_nan=False)
+
+
+def _finite(value):
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    if isinstance(value, dict):
+        return {key: _finite(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_finite(item) for item in value]
+    return value
 
 
 def _repair_sys_executable():
@@ -41,7 +58,7 @@ def train_lora(config_json):
 
     _versions.require_minimums()
 
-    return json.dumps(_training.train_lora(json.loads(config_json)))
+    return _dumps(_training.train_lora(json.loads(config_json)))
 
 
 def merge_lora(config_json):
@@ -49,7 +66,7 @@ def merge_lora(config_json):
 
     _versions.require_minimums()
 
-    return json.dumps(_merge.merge_lora(json.loads(config_json)))
+    return _dumps(_merge.merge_lora(json.loads(config_json)))
 
 
 def generate(config_json):
@@ -57,17 +74,17 @@ def generate(config_json):
 
     _versions.require_minimums()
 
-    return json.dumps(_generate.generate(json.loads(config_json)))
+    return _dumps(_generate.generate(json.loads(config_json)))
 
 
 def detect_device(config_json="{}"):
     from . import _device
 
     config = json.loads(config_json)
-    return json.dumps(_device.resolve_device(config.get("device")))
+    return _dumps(_device.resolve_device(config.get("device")))
 
 
 def diagnostics():
     from . import _diagnostics
 
-    return json.dumps(_diagnostics.diagnostics())
+    return _dumps(_diagnostics.diagnostics())
