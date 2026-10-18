@@ -50,10 +50,12 @@ def generate(config):
             messages = config.get("messages")
             if messages:
                 prompt = _chat.render(tokenizer, messages, add_generation_prompt=True)
+                add_special_tokens = not _chat.writes_special_tokens(tokenizer)
             else:
                 prompt = config["prompt"]
+                add_special_tokens = True
 
-            inputs = tokenizer(prompt, return_tensors="pt").to(device)
+            inputs = tokenizer(prompt, return_tensors="pt", add_special_tokens=add_special_tokens).to(device)
             with torch.no_grad():
                 output_ids = model.generate(**inputs, **generation_options)
             completion_ids = output_ids[0][inputs["input_ids"].shape[1]:]

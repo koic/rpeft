@@ -21,6 +21,15 @@ def render(tokenizer, messages, add_generation_prompt=False):
     return rendered
 
 
+def writes_special_tokens(tokenizer):
+    """Whether render's output already holds the special tokens, BOS included, that the model expects.
+
+    A chat template writes them itself, so tokenizing its output must not add them again; the plain
+    fallback rendering writes none.
+    """
+    return bool(getattr(tokenizer, "chat_template", None))
+
+
 def _without_control_tokens(tokenizer, messages):
     # The rendered text is tokenized as a whole, so a control token such as <|im_end|> written inside
     # a message would end the turn there and the rest would be read as a turn of its own. Message text

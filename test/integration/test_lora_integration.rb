@@ -152,6 +152,18 @@ class TestLoRAIntegration < Minitest::Test
     assert_equal([{'final_loss' => nil, 'eval_loss' => nil, 'steps' => 4}], JSON.parse(json))
   end
 
+  def test_messages_datasets_start_with_a_single_bos_token
+    Grain.check
+    tokenizer = PyCall.import_module('transformers').AutoTokenizer.from_pretrained(TINY_MODEL)
+    data = PyCall.import_module('grain_backend._data')
+    path = File.join(@workdir, 'messages.jsonl')
+    File.write(path, {messages: [{role: 'user', content: 'hi'}, {role: 'assistant', content: 'ok'}]}.to_json)
+
+    ids = data.load_tokenized_dataset(path, tokenizer, 'text', 64, 'messages')[0]['input_ids'].to_a
+
+    assert_equal 1, ids.count(tokenizer.bos_token_id)
+  end
+
   def test_chat_messages_cannot_contain_the_tokenizer_control_tokens
     Grain.check
     tokenizer = PyCall.import_module('transformers').AutoTokenizer.from_pretrained(TINY_MODEL)
