@@ -78,7 +78,7 @@ then check the environment:
 $ bundle exec grain doctor
 ```
 
-`grain doctor` reports the Python interpreter, each required package, and the available devices, and tells you what is missing.
+`grain doctor` reports the Python interpreter, each required package, and the available devices, and tells you what is missing or outdated.
 
 ## Usage
 
@@ -148,7 +148,7 @@ adapter.generate(prompt, max_new_tokens: 64) # the same output, no merged model 
 The base model is read from the metadata recorded in the adapter directory, so it does not have to be given again.
 
 `Grain::Model#chat` takes a transcript instead of a prompt and renders it with the model's own chat template, including the marker
-that tells the model where its turn begins. Pass the whole transcript on every call to continue a conversation:
+that tells the model where its turn begins. Pass the whole transcript on every call to continue a conversation; roles are limited to `system`, `user`, and `assistant`:
 
 ```ruby
 chat_model = Grain::Model.new(path: 'Qwen/Qwen2.5-Coder-0.5B-Instruct')
@@ -183,7 +183,7 @@ The rule behind this also applies to choosing a dataset format: the prompt at in
 | `eval_dataset:`   | `nil`   | Held-out dataset, in the same format as `dataset:`. Enables per-epoch evaluation        |
 | `checkpoints:`    | `false` | Checkpoint every epoch so an interrupted run can resume; removed once training ends     |
 | `resume:`         | `false` | Resume from the last checkpoint in `output_dir`, which must be given explicitly         |
-| `output_dir:`     | `nil`   | Adapter output directory. `nil` uses a temporary directory; `save` moves it             |
+| `output_dir:`     | `nil`   | Adapter output directory: new, empty, or an earlier output. `nil` uses a temporary one  |
 | `device:`         | `:auto` | `:auto`, `:cuda`, `:mps`, or `:cpu`                                                     |
 
 ### Dataset
@@ -202,7 +202,8 @@ Lines with `instruction`/`output` keys (and an optional `input`) are also accept
 ```
 
 Chat transcripts are accepted as a `messages` array. These are rendered with the tokenizer's own chat template,
-so the conversation is formatted the way the model expects:
+so the conversation is formatted the way the model expects. Roles are limited to `system`, `user`, and `assistant`,
+the ones every chat template understands:
 
 ```json
 {"messages":[{"role":"user","content":"How do I reverse an array?"},{"role":"assistant","content":"[1, 2, 3].reverse"}]}
