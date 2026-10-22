@@ -94,7 +94,7 @@ class TestLoRAAdapter < GrainTest
     File.write(File.join(@workdir, 'grain_metadata.json'), '{}')
     File.write(File.join(@adapter_dir, 'dummy'), 'x')
 
-    error = assert_raises(Grain::Error) { new_adapter.save(@workdir) }
+    error = assert_raises(Grain::ConfigurationError) { new_adapter.save(@workdir) }
 
     assert_match(/contains/, error.message)
     assert_path_exists File.join(@adapter_dir, 'dummy')
@@ -103,7 +103,7 @@ class TestLoRAAdapter < GrainTest
   def test_save_refuses_a_destination_inside_the_adapter
     File.write(File.join(@adapter_dir, 'dummy'), 'x')
 
-    assert_raises(Grain::Error) do
+    assert_raises(Grain::ConfigurationError) do
       new_adapter.save(File.join(@adapter_dir, 'nested'))
     end
     assert_path_exists File.join(@adapter_dir, 'dummy')
@@ -113,7 +113,7 @@ class TestLoRAAdapter < GrainTest
     dest = File.join(@workdir, 'existing')
     FileUtils.mkdir_p(dest)
 
-    error = assert_raises(Grain::Error) { new_adapter.save(dest) }
+    error = assert_raises(Grain::ConfigurationError) { new_adapter.save(dest) }
 
     assert_match(/already exists/, error.message)
   end
@@ -162,7 +162,7 @@ class TestLoRAAdapter < GrainTest
     FileUtils.mkdir_p(output)
     File.write(File.join(output, 'config.json'), %({"app": "settings"}))
 
-    error = assert_raises(Grain::Error) { new_adapter.merge(output_dir: output) }
+    error = assert_raises(Grain::ConfigurationError) { new_adapter.merge(output_dir: output) }
 
     assert_match(/not empty/, error.message)
     assert_equal %({"app": "settings"}), File.read(File.join(output, 'config.json'))

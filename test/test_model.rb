@@ -38,7 +38,7 @@ class TestModel < GrainTest
     FileUtils.mkdir_p(dest)
     model = Grain::Model.new(path: @model_dir)
 
-    assert_raises(Grain::Error) { model.save(dest) }
+    assert_raises(Grain::ConfigurationError) { model.save(dest) }
   end
 
   def test_save_replaces_a_previously_saved_model
@@ -82,7 +82,7 @@ class TestModel < GrainTest
     File.write(File.join(dest, 'config.json'), '{}')
     model = Grain::Model.new(path: @model_dir)
 
-    assert_raises(Grain::Error) do
+    assert_raises(Grain::ConfigurationError) do
       model.save(dest)
     end
     assert_path_exists File.join(dest, 'config.json')

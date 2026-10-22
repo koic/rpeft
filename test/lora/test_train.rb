@@ -228,7 +228,7 @@ class TestLoRATrain < GrainTest
     FileUtils.mkdir_p(output)
     File.write(File.join(output, 'README.md'), "# Project\n")
 
-    error = assert_raises(Grain::Error) { train(output_dir: output) }
+    error = assert_raises(Grain::ConfigurationError) { train(output_dir: output) }
 
     assert_match(/not empty/, error.message)
     assert_equal "# Project\n", File.read(File.join(output, 'README.md'))

@@ -17,13 +17,13 @@ module Grain
       dest = File.expand_path(dest)
       return dest if canonical(source) == canonical(dest)
       if inside?(source, dest) || inside?(dest, source)
-        raise Error, "cannot save #{File.expand_path(source)} to #{dest}: one directory contains the other"
+        raise ConfigurationError, "cannot save #{File.expand_path(source)} to #{dest}: one directory contains the other"
       end
 
       if File.exist?(dest)
         unless replaceable?(dest, replace_markers)
-          raise Error, "destination already exists: #{dest} (Grain only replaces " \
-                       'directories it previously saved; remove it or pick another path)'
+          raise ConfigurationError, "destination already exists: #{dest} (Grain only replaces " \
+                                    'directories it previously saved; remove it or pick another path)'
         end
 
         FileUtils.rm_rf(dest)
@@ -40,8 +40,8 @@ module Grain
     def prepare(dir, markers:)
       dir = File.expand_path(dir)
       if File.exist?(dir) && !(File.directory?(dir) && (Dir.empty?(dir) || replaceable?(dir, markers)))
-        raise Error, "output directory is not empty: #{dir} (Grain only writes into empty directories " \
-                     'or ones it previously wrote; remove it or pick another path)'
+        raise ConfigurationError, "output directory is not empty: #{dir} (Grain only writes into empty directories " \
+                                  'or ones it previously wrote; remove it or pick another path)'
       end
 
       FileUtils.mkdir_p(dir)
