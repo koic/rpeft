@@ -21,6 +21,25 @@ class TestCLIGenerate < GrainTest
     assert_empty @backend.calls
   end
 
+  def test_shows_control_characters_in_the_completion_instead_of_sending_them_to_the_terminal
+    completion = "[1, 2, 3].reverse\e]52;c;ZWNobw==\a\e[2J\r\n# =>\t[3, 2, 1]\u009B"
+    Grain.backend = FakeBackend.new(responses: {generate: {'completion' => completion}})
+
+    status, out, = run_cli(['generate', '--model', 'fake/model', '--prompt', 'User: hi', '--device', 'cpu'])
+
+    assert_equal 0, status
+    assert_equal "[1, 2, 3].reverse\\x1B]52;c;ZWNobw==\\x07\\x1B[2J\\x0D\n# =>\t[3, 2, 1]\\x9B\n", out
+  end
+
+  def test_shows_control_characters_in_error_messages
+    Grain.backend = FakeBackend.new(error: Grain::GenerationError.new("failed: \e[2Jcleared"))
+
+    status, _out, err = run_cli(['generate', '--model', 'fake/model', '--prompt', 'User: hi', '--device', 'cpu'])
+
+    assert_equal 1, status
+    assert_equal "grain: failed: \\x1B[2Jcleared\n", err
+  end
+
   def test_requires_a_model_or_an_adapter
     status, _out, err = run_cli(['generate', '--prompt', 'User: hi'])
 

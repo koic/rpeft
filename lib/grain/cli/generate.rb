@@ -60,7 +60,7 @@ module Grain
           Model.new(path: options[:model])
         end
 
-        @out.puts target.generate(options[:prompt], **generate_options)
+        @out.puts printable(target.generate(options[:prompt], **generate_options))
 
         0
       end

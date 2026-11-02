@@ -41,11 +41,18 @@ module Grain
 
         execute(options) || 0
       rescue Error => e
-        @err.puts "grain: #{e.message}"
+        @err.puts "grain: #{printable(e.message)}"
         1
       end
 
       private
+
+      # Control characters other than newline and tab, made visible as \xNN. Model output and messages
+      # carried over from Python are arbitrary text, and a terminal would act on an escape sequence in them
+      # (moving the cursor, rewriting the screen or the clipboard) instead of showing it.
+      def printable(text)
+        text.to_s.scrub.gsub(/[\x00-\x08\x0B-\x1F\x7F\u0080-\u009F]/) { |char| format('\\x%02X', char.ord) }
+      end
 
       def required_options
         []
@@ -58,7 +65,7 @@ module Grain
       end
 
       def usage_error(message, parser)
-        @err.puts "grain: #{message}"
+        @err.puts "grain: #{printable(message)}"
         @err.puts parser
         2
       end
