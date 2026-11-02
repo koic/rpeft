@@ -148,6 +148,9 @@ adapter.generate(prompt, max_new_tokens: 64) # the same output, no merged model 
 ```
 
 The base model is read from the metadata recorded in the adapter directory, so it does not have to be given again.
+When the base model is a local directory, its absolute path is recorded there and in `adapter_config.json`,
+since a relative path would point elsewhere once the adapter is loaded from another directory.
+Check that path before sharing such an adapter; `Adapter.load` takes `base_model:` to load it against a model somewhere else.
 
 `Grain::Model#chat` takes a transcript instead of a prompt and renders it with the model's own chat template, including the marker
 that tells the model where its turn begins. Pass the whole transcript on every call to continue a conversation; roles are limited to `system`, `user`, and `assistant`:
