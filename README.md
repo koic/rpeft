@@ -129,6 +129,8 @@ model = adapter.merge
 model.generate(prompt, max_new_tokens: 64) # Ruby code from the fine-tuned model
 ```
 
+A model name is looked up as a local directory first, as Transformers does, so run Grain only in directories you trust.
+
 Passing `temperature:` or `top_p:` switches decoding from greedy to sampling, which makes the model produce
 different wording on each call. `seed:` makes sampled output reproducible again:
 
