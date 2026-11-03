@@ -1,6 +1,9 @@
 # Changelog
 
-## 0.1.0 (unreleased)
+## 0.1.0 (2026-11-04)
+
+The first release. It brings LoRA fine-tuning of large language models to Ruby, from training an adapter
+to merging it into a standalone model and generating text, on Apple Silicon, CUDA, or CPU.
 
 - LoRA fine-tuning from Ruby (`RPEFT::LoRA.train`) through PyCall, PyTorch, Hugging Face Transformers, and PEFT
 - `RPEFT::LoRA::Adapter` and `RPEFT::Model` objects modeling the train, adapter, and merge lifecycle
