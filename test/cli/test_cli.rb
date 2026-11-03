@@ -2,26 +2,26 @@
 
 require 'test_helper'
 
-class TestCLI < GrainTest
+class TestCLI < RPEFTTest
   def test_prints_usage_without_arguments
     status, out, = run_cli([])
 
     assert_equal 0, status
-    assert_includes out, 'Usage: grain'
+    assert_includes out, 'Usage: rpeft'
   end
 
   def test_prints_usage_for_help
     status, out, = run_cli(['help'])
 
     assert_equal 0, status
-    assert_includes out, 'Usage: grain'
+    assert_includes out, 'Usage: rpeft'
   end
 
   def test_prints_the_version
     status, out, = run_cli(['version'])
 
     assert_equal 0, status
-    assert_equal "#{Grain::VERSION}\n", out
+    assert_equal "#{RPEFT::VERSION}\n", out
   end
 
   def test_rejects_an_unknown_command

@@ -2,10 +2,10 @@
 
 require 'test_helper'
 
-class TestCLILoraTrain < GrainTest
+class TestCLILoraTrain < RPEFTTest
   def setup
     super
-    @workdir = Dir.mktmpdir('grain_test')
+    @workdir = Dir.mktmpdir('rpeft_test')
     @dataset = File.join(@workdir, 'train.jsonl')
     File.write(@dataset, %({"text":"User: hi\\nAssistant: hello"}\n))
   end
@@ -62,7 +62,7 @@ class TestCLILoraTrain < GrainTest
   end
 
   def test_reports_backend_errors_with_exit_status_one
-    Grain.backend = FakeBackend.new(error: Grain::TrainingError.new('loss exploded'))
+    RPEFT.backend = FakeBackend.new(error: RPEFT::TrainingError.new('loss exploded'))
 
     status, _out, err = run_cli(['lora', 'train', '--model', 'm', '--dataset', @dataset,
                                  '--output', File.join(@workdir, 'adapter')])

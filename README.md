@@ -1,7 +1,8 @@
-# Grain
+# RPEFT
 
-Grain brings LoRA fine-tuning of large language models to Ruby. It provides an API and CLI that model the LoRA lifecycle,
+RPEFT brings LoRA fine-tuning of large language models to Ruby. It provides an API and CLI that model the LoRA lifecycle,
 while the heavy lifting is done by the Python ecosystem (PyTorch, Hugging Face Transformers, PEFT, Datasets, Accelerate) through PyCall.
+It is an independent project, not affiliated with Hugging Face.
 
 ## Features
 
@@ -10,7 +11,7 @@ while the heavy lifting is done by the Python ecosystem (PyTorch, Hugging Face T
 - Generation and chat with a merged model, a Hugging Face model id, or an adapter on top of its base model
 - Apple Silicon (MPS) as a first-class target, with CUDA and CPU auto-detected
 - Validation loss, per-epoch checkpoints, and resuming
-- A CLI for training, merging, and generation, and `grain doctor` to check the Python environment
+- A CLI for training, merging, and generation, and `rpeft doctor` to check the Python environment
 
 ## The model behind the API
 
@@ -33,14 +34,14 @@ flowchart LR
 
 Merging is optional: an adapter can also generate on top of its base model as is.
 
-The [`rank:` option](#training-options) of `Grain::LoRA.train` is exactly the $r$ above.
+The [`rank:` option](#training-options) of `RPEFT::LoRA.train` is exactly the $r$ above.
 
 ## Requirements
 
 - Ruby 3.0+
 - Python 3.10+ with a shared libpython (static Python builds such as pyenv's default do not work; tested with Python 3.12)
 - Ruby and Python built for the same CPU architecture. On Apple Silicon, an x86_64 Ruby running under Rosetta cannot load an arm64 libpython;
-  a symbol error such as `_Py_NoneStruct` from `grain doctor` usually means this mismatch
+  a symbol error such as `_Py_NoneStruct` from `rpeft doctor` usually means this mismatch
 - The Python packages `torch` (2.6 or later), `transformers` (4.56 or later), `peft`, `datasets`, and `accelerate`
 
 ## Installation
@@ -48,7 +49,7 @@ The [`rank:` option](#training-options) of `Grain::LoRA.train` is exactly the $r
 Add the gem to your Gemfile:
 
 ```console
-$ bundle add grain
+$ bundle add rpeft
 ```
 
 Set up a Python environment. With venv:
@@ -71,21 +72,21 @@ Note for pyenv users: PyCall needs a shared libpython, so install the interprete
 $ PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install 3.12
 ```
 
-When a `.venv` directory sits next to the Gemfile, Grain uses it automatically under `bundle exec` or `bundler/setup`. Set the `PYTHON` environment variable to override the interpreter,
+When a `.venv` directory sits next to the Gemfile, RPEFT uses it automatically under `bundle exec` or `bundler/setup`. Set the `PYTHON` environment variable to override the interpreter,
 then check the environment:
 
 ```console
-$ bundle exec grain doctor
+$ bundle exec rpeft doctor
 ```
 
-`grain doctor` reports the Python interpreter, each required package, and the available devices, and tells you what is missing or outdated.
+`rpeft doctor` reports the Python interpreter, each required package, and the available devices, and tells you what is missing or outdated.
 
 ## Usage
 
 ```ruby
-require 'grain'
+require 'rpeft'
 
-adapter = Grain::LoRA.train(
+adapter = RPEFT::LoRA.train(
   model: 'Qwen/Qwen2.5-Coder-0.5B',
   dataset: 'ruby_answers.jsonl',
   rank: 8, # The LoRA rank r
@@ -105,31 +106,31 @@ Passing `eval_dataset:` holds a second dataset out of training and evaluates aga
 The final validation loss lands in the adapter metadata, which is how you tell learning apart from memorizing:
 
 ```ruby
-adapter = Grain::LoRA.train(model: ..., dataset: 'train.jsonl', eval_dataset: 'validation.jsonl')
+adapter = RPEFT::LoRA.train(model: ..., dataset: 'train.jsonl', eval_dataset: 'validation.jsonl')
 adapter.metadata.dig('training', 'train_loss') # => 0.74
 adapter.metadata.dig('training', 'eval_loss')  # => 0.91
 ```
 
-`Grain::LoRA.train` returns a `Grain::LoRA::Adapter` that knows its `path`, `base_model`, `rank`, `alpha`, `dropout`, `target_modules`, and training `metadata`.
-`adapter.merge` returns a `Grain::Model` with `path` and `base_model`. `save` moves the artifact to the given path; a destination produced by a previous `save` is replaced,
+`RPEFT::LoRA.train` returns a `RPEFT::LoRA::Adapter` that knows its `path`, `base_model`, `rank`, `alpha`, `dropout`, `target_modules`, and training `metadata`.
+`adapter.merge` returns a `RPEFT::Model` with `path` and `base_model`. `save` moves the artifact to the given path; a destination produced by a previous `save` is replaced,
 so scripts can be re-run, while any other existing path is refused.
 
 ### Generation
 
-`Grain::Model#generate` produces a completion for a prompt. It uses greedy decoding, so the output is deterministic for a given model and prompt.
+`RPEFT::Model#generate` produces a completion for a prompt. It uses greedy decoding, so the output is deterministic for a given model and prompt.
 The model can be a merged model directory or a Hugging Face model id, which makes a before and after comparison one call each:
 
 ```ruby
 prompt = "User: How do I reverse an array?\nAssistant:"
 
-base = Grain::Model.new(path: 'Qwen/Qwen2.5-Coder-0.5B')
+base = RPEFT::Model.new(path: 'Qwen/Qwen2.5-Coder-0.5B')
 base.generate(prompt, max_new_tokens: 64)  # An explanation and Python code from the base model
 
 model = adapter.merge
 model.generate(prompt, max_new_tokens: 64) # Ruby code from the fine-tuned model
 ```
 
-A model name is looked up as a local directory first, as Transformers does, so run Grain only in directories you trust.
+A model name is looked up as a local directory first, as Transformers does, so run RPEFT only in directories you trust.
 
 Passing `temperature:` or `top_p:` switches decoding from greedy to sampling, which makes the model produce
 different wording on each call. `seed:` makes sampled output reproducible again:
@@ -138,12 +139,12 @@ different wording on each call. `seed:` makes sampled output reproducible again:
 model.generate(prompt, temperature: 0.7, top_p: 0.9, seed: 42)
 ```
 
-`Grain::LoRA::Adapter#generate` runs the same generation with the adapter applied on top of its base model, without merging.
+`RPEFT::LoRA::Adapter#generate` runs the same generation with the adapter applied on top of its base model, without merging.
 Since an adapter is a few MB against roughly a gigabyte for a merged model, this is the cheap way to try an adapter,
 including one received from someone else:
 
 ```ruby
-adapter = Grain::LoRA::Adapter.load('./ruby-lora')
+adapter = RPEFT::LoRA::Adapter.load('./ruby-lora')
 adapter.generate(prompt, max_new_tokens: 64) # the same output, no merged model needed
 ```
 
@@ -152,11 +153,11 @@ When the base model is a local directory, its absolute path is recorded there an
 since a relative path would point elsewhere once the adapter is loaded from another directory.
 Check that path before sharing such an adapter; `Adapter.load` takes `base_model:` to load it against a model somewhere else.
 
-`Grain::Model#chat` takes a transcript instead of a prompt and renders it with the model's own chat template, including the marker
+`RPEFT::Model#chat` takes a transcript instead of a prompt and renders it with the model's own chat template, including the marker
 that tells the model where its turn begins. Pass the whole transcript on every call to continue a conversation; roles are limited to `system`, `user`, and `assistant`:
 
 ```ruby
-chat_model = Grain::Model.new(path: 'Qwen/Qwen2.5-Coder-0.5B-Instruct')
+chat_model = RPEFT::Model.new(path: 'Qwen/Qwen2.5-Coder-0.5B-Instruct')
 
 chat_model.chat([
   {role: 'user', content: 'How do I reverse an array in Ruby?'},
@@ -166,7 +167,7 @@ chat_model.chat([
 # => "The last element of the array is `3`."
 ```
 
-`Grain::LoRA::Adapter#chat` does the same with the adapter applied on top of its base model.
+`RPEFT::LoRA::Adapter#chat` does the same with the adapter applied on top of its base model.
 
 Reach for `#chat` when the model understands a chat template: an instruction-tuned model, or one fine-tuned on chat-format data.
 A base model is a different matter. `Qwen/Qwen2.5-Coder-0.5B`, for instance, ships a chat template but was never instruction-tuned,
@@ -217,7 +218,7 @@ the ones every chat template understands:
 `dataset:` also accepts any Enumerable of record Hashes in the same three shapes, so data built in Ruby needs no file of its own:
 
 ```ruby
-Grain::LoRA.train(
+RPEFT::LoRA.train(
   model: 'Qwen/Qwen2.5-Coder-0.5B',
   dataset: Article.published.map { |article| {text: article.body} }
 )
@@ -232,7 +233,7 @@ because the difference is the shape of the output rather than its wording.
 The device is auto-detected with CUDA > MPS > CPU priority:
 
 ```ruby
-Grain.device # => :mps
+RPEFT.device # => :mps
 ```
 
 Apple Silicon Macs (M1 and later) are a first-class target: small models such as `Qwen/Qwen2.5-Coder-0.5B` fine-tune on MPS.
@@ -242,12 +243,12 @@ operators MPS does not implement. Merging always runs on CPU, which is the memor
 ### Environment check
 
 ```ruby
-Grain.check # => a Hash describing Python, packages, and devices
+RPEFT.check # => a Hash describing Python, packages, and devices
 ```
 
 ```console
-$ grain doctor
-Ruby:         4.0.6 (grain 0.1.0)
+$ rpeft doctor
+Ruby:         4.0.6 (rpeft 0.1.0)
 Python:       3.12.13 (/path/to/.venv/bin/python)
 torch:        OK 2.13.0
 transformers: OK 5.15.0
@@ -260,9 +261,9 @@ Status:       OK
 
 ### Errors
 
-Python exceptions never surface raw. They are translated into `Grain::DependencyError`, `Grain::ModelLoadError`, `Grain::DatasetError`, `Grain::TrainingError`,
-`Grain::MergeError`, or `Grain::GenerationError`, and the original Python error (with its traceback) stays reachable via `error.cause`.
-Invalid arguments are rejected in Ruby with `Grain::ConfigurationError` before the backend is called.
+Python exceptions never surface raw. They are translated into `RPEFT::DependencyError`, `RPEFT::ModelLoadError`, `RPEFT::DatasetError`, `RPEFT::TrainingError`,
+`RPEFT::MergeError`, or `RPEFT::GenerationError`, and the original Python error (with its traceback) stays reachable via `error.cause`.
+Invalid arguments are rejected in Ruby with `RPEFT::ConfigurationError` before the backend is called.
 
 ## CLI
 
@@ -270,7 +271,7 @@ The CLI covers the core of the lifecycle: training, merging, and generation from
 Validation datasets, checkpoints, and chat are available from the Ruby API only.
 
 ```console
-$ grain lora train \
+$ rpeft lora train \
     --model Qwen/Qwen2.5-Coder-0.5B \
     --dataset ruby_answers.jsonl \
     --rank 8 \
@@ -279,7 +280,7 @@ $ grain lora train \
 ```
 
 ```console
-$ grain lora merge \
+$ rpeft lora merge \
     --adapter ruby-lora \
     --output ruby-model
 ```
@@ -287,7 +288,7 @@ $ grain lora merge \
 `lora merge` reads the base model from the metadata recorded in the adapter directory; pass `--model` to override it (for example, for adapters produced by plain PEFT).
 
 ```console
-$ grain generate \
+$ rpeft generate \
     --model ruby-model \
     --prompt $'User: How do I reverse an array?\nAssistant:'
 ```
@@ -297,31 +298,31 @@ $ grain generate \
 Passing `--adapter` instead generates with the adapter applied on top of its base model, without merging:
 
 ```console
-$ grain generate \
+$ rpeft generate \
     --adapter ruby-lora \
     --prompt $'User: How do I reverse an array?\nAssistant:'
 ```
 
-`grain doctor` and `grain version` are also available.
+`rpeft doctor` and `rpeft version` are also available.
 
 ## Examples
 
 A runnable end-to-end example, which trains an adapter, merges it, and compares the model's answers before and after,
-is available in [`examples`](https://github.com/koic/grain/tree/master/examples).
+is available in [`examples`](https://github.com/koic/rpeft/tree/master/examples).
 
 ## Architecture
 
-The Ruby side is a thin layer. Each call goes through PyCall to the Grain backend, a Python package bundled with the gem and not a public API,
+The Ruby side is a thin layer. Each call goes through PyCall to the RPEFT backend, a Python package bundled with the gem and not a public API,
 which drives the Python libraries that do the actual work on the selected device:
 
 ```mermaid
 flowchart LR
   subgraph rubyside [Ruby]
-    ruby[Ruby application] --> grain[Grain] --> pycall[PyCall]
-    cli[Grain CLI] --> grain
+    ruby[Ruby application] --> rpeft[RPEFT] --> pycall[PyCall]
+    cli[RPEFT CLI] --> rpeft
   end
   subgraph pythonside [Python]
-    backend[Grain backend]
+    backend[RPEFT backend]
     subgraph hf [Model libraries]
       direction TB
       peft[PEFT] --> transformers[Transformers] --> accelerate[Accelerate]
@@ -336,18 +337,18 @@ flowchart LR
   torch --> device
 ```
 
-Grain CLI, Grain, and the Grain backend ship in the grain gem.
+RPEFT CLI, RPEFT, and the RPEFT backend ship in the rpeft gem.
 Arrows show what each part uses at run time, not package dependencies.
 
-Grain does not reimplement Transformers or LoRA in Ruby, and it does not hide what fine-tuning is. It hides Python plumbing, not concepts.
+RPEFT does not reimplement Transformers or LoRA in Ruby, and it does not hide what fine-tuning is. It hides Python plumbing, not concepts.
 
 For the same reason, adapters are saved and loaded by PEFT itself. An adapter directory is a standard PEFT adapter (`adapter_config.json` and `adapter_model.safetensors`) with
-Grain's own metadata in `grain_metadata.json` alongside, so adapters trained with Grain load in Python with PEFT's `PeftModel.from_pretrained`, and `Grain::LoRA::Adapter.load` accepts
+RPEFT's own metadata in `rpeft_metadata.json` alongside, so adapters trained with RPEFT load in Python with PEFT's `PeftModel.from_pretrained`, and `RPEFT::LoRA::Adapter.load` accepts
 adapters produced by plain PEFT.
 
 ## Process model and limitations
 
-Grain is designed for CLI, Rake tasks, batch jobs, and offline experiments. It is not designed to run inside web application workers:
+RPEFT is designed for CLI, Rake tasks, batch jobs, and offline experiments. It is not designed to run inside web application workers:
 
 - PyCall embeds a single Python interpreter in the Ruby process. Backend calls hold both the Python GIL and Ruby's GVL, so every Ruby thread in the process stalls until the call returns.
 - Do not fork the process after the backend has been initialized (Spring, Puma workers, and so on). The backend loads lazily, so forking before the first call is safe.
@@ -355,9 +356,8 @@ Grain is designed for CLI, Rake tasks, batch jobs, and offline experiments. It i
 
 ## Name
 
-A model is hundreds of millions or billions of scalar parameters, and LoRA trains only a small fraction of them.
-Each of those parameters is a grain, the smallest particle of the whole. A grain is also a traditional unit of weight for gems
-(a pearl grain is a quarter carat), which suits a Ruby gem whose subject is model weights.
+RPEFT stands for Ruby and PEFT, Parameter-Efficient Fine-Tuning: training a small number of added parameters
+instead of the whole model. Of the PEFT methods, RPEFT covers LoRA, through Hugging Face's PEFT library.
 
 ## License
 

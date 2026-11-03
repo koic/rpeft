@@ -1,10 +1,10 @@
 # frozen_string_literal: true
 
-# Test double for the backend seam (see Grain::Backend). Records
+# Test double for the backend seam (see RPEFT::Backend). Records
 # every call in #calls, returns canned responses that can be
 # overridden per method via responses:, and raises error: when set.
 class FakeBackend
-  # datasets maps each dataset path passed to train_lora to its lines at call time, because Grain removes
+  # datasets maps each dataset path passed to train_lora to its lines at call time, because RPEFT removes
   # its temporary copies once training returns.
   attr_reader :calls, :datasets
 
@@ -18,7 +18,7 @@ class FakeBackend
   def self.healthy_diagnostics
     {
       'python' => {'executable' => '/usr/bin/python3', 'version' => '3.12.4'},
-      'backend_version' => Grain::VERSION,
+      'backend_version' => RPEFT::VERSION,
       'libraries' => {
         'torch' => {'installed' => true, 'version' => '2.6.0', 'minimum' => '2.6', 'outdated' => false},
         'transformers' => {'installed' => true, 'version' => '4.56.0', 'minimum' => '4.56', 'outdated' => false},

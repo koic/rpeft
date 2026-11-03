@@ -2,10 +2,10 @@
 
 require 'test_helper'
 
-class TestCLILoraMerge < GrainTest
+class TestCLILoraMerge < RPEFTTest
   def setup
     super
-    @workdir = Dir.mktmpdir('grain_test')
+    @workdir = Dir.mktmpdir('rpeft_test')
     @adapter_dir = File.join(@workdir, 'adapter')
     @merged_dir = File.join(@workdir, 'merged')
     FileUtils.mkdir_p(@adapter_dir)
@@ -67,6 +67,6 @@ class TestCLILoraMerge < GrainTest
       'base_model' => base_model,
       'lora' => {'rank' => 8}
     }
-    File.write(File.join(@adapter_dir, 'grain_metadata.json'), JSON.generate(metadata))
+    File.write(File.join(@adapter_dir, 'rpeft_metadata.json'), JSON.generate(metadata))
   end
 end

@@ -9,19 +9,19 @@
 #
 #   bundle exec ruby examples/train_and_merge.rb
 
-require 'grain'
+require 'rpeft'
 
 BASE_MODEL = 'Qwen/Qwen2.5-Coder-0.5B'
 PROMPT = "User: How do I reverse an array?\nAssistant:"
 
-puts "Device: #{Grain.device}"
+puts "Device: #{RPEFT.device}"
 
 puts
 puts '--- Before (base model) ---'
-base = Grain::Model.new(path: BASE_MODEL)
+base = RPEFT::Model.new(path: BASE_MODEL)
 puts base.generate(PROMPT, max_new_tokens: 60)
 
-adapter = Grain::LoRA.train(
+adapter = RPEFT::LoRA.train(
   model: BASE_MODEL,
   dataset: File.expand_path('ruby_answers.jsonl', __dir__),
   rank: 8, # The LoRA rank r in W = W0 + B A.

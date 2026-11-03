@@ -2,10 +2,10 @@
 
 require 'test_helper'
 
-class TestCLIGenerate < GrainTest
+class TestCLIGenerate < RPEFTTest
   def setup
     super
-    @workdir = Dir.mktmpdir('grain_test')
+    @workdir = Dir.mktmpdir('rpeft_test')
   end
 
   def teardown
@@ -23,7 +23,7 @@ class TestCLIGenerate < GrainTest
 
   def test_shows_control_characters_in_the_completion_instead_of_sending_them_to_the_terminal
     completion = "[1, 2, 3].reverse\e]52;c;ZWNobw==\a\e[2J\r\n# =>\t[3, 2, 1]\u009B"
-    Grain.backend = FakeBackend.new(responses: {generate: {'completion' => completion}})
+    RPEFT.backend = FakeBackend.new(responses: {generate: {'completion' => completion}})
 
     status, out, = run_cli(['generate', '--model', 'fake/model', '--prompt', 'User: hi', '--device', 'cpu'])
 
@@ -32,12 +32,12 @@ class TestCLIGenerate < GrainTest
   end
 
   def test_shows_control_characters_in_error_messages
-    Grain.backend = FakeBackend.new(error: Grain::GenerationError.new("failed: \e[2Jcleared"))
+    RPEFT.backend = FakeBackend.new(error: RPEFT::GenerationError.new("failed: \e[2Jcleared"))
 
     status, _out, err = run_cli(['generate', '--model', 'fake/model', '--prompt', 'User: hi', '--device', 'cpu'])
 
     assert_equal 1, status
-    assert_equal "grain: failed: \\x1B[2Jcleared\n", err
+    assert_equal "rpeft: failed: \\x1B[2Jcleared\n", err
   end
 
   def test_requires_a_model_or_an_adapter
@@ -52,7 +52,7 @@ class TestCLIGenerate < GrainTest
     adapter_dir = File.join(@workdir, 'adapter')
     FileUtils.mkdir_p(adapter_dir)
     metadata = {'kind' => 'lora_adapter', 'base_model' => 'meta/base', 'lora' => {'rank' => 8}}
-    File.write(File.join(adapter_dir, 'grain_metadata.json'), JSON.generate(metadata))
+    File.write(File.join(adapter_dir, 'rpeft_metadata.json'), JSON.generate(metadata))
 
     status, out, = run_cli(['generate', '--adapter', adapter_dir, '--prompt', 'User: hi', '--device', 'cpu'])
 
@@ -93,7 +93,7 @@ class TestCLIGenerate < GrainTest
   end
 
   def test_reports_backend_errors_with_exit_status_one
-    Grain.backend = FakeBackend.new(error: Grain::GenerationError.new('generation failed'))
+    RPEFT.backend = FakeBackend.new(error: RPEFT::GenerationError.new('generation failed'))
 
     status, _out, err = run_cli(['generate', '--model', 'fake/model', '--prompt', 'User: hi'])
 

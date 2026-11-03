@@ -2,10 +2,10 @@
 
 require 'test_helper'
 
-class TestLoRATrain < GrainTest
+class TestLoRATrain < RPEFTTest
   def setup
     super
-    @workdir = Dir.mktmpdir('grain_test')
+    @workdir = Dir.mktmpdir('rpeft_test')
     @dataset = File.join(@workdir, 'train.jsonl')
     File.write(@dataset, %({"text":"User: hi\\nAssistant: hello"}\n))
   end
@@ -18,7 +18,7 @@ class TestLoRATrain < GrainTest
   def test_returns_an_adapter_with_the_lora_configuration
     adapter = train(rank: 4, alpha: 8)
 
-    assert_instance_of Grain::LoRA::Adapter, adapter
+    assert_instance_of RPEFT::LoRA::Adapter, adapter
     assert_equal 'fake/model', adapter.base_model
     assert_equal 4, adapter.rank
     assert_equal 8, adapter.alpha
@@ -66,10 +66,10 @@ class TestLoRATrain < GrainTest
     assert_equal %w(q_proj v_proj), adapter.target_modules
   end
 
-  def test_writes_grain_metadata_into_the_adapter_directory
+  def test_writes_rpeft_metadata_into_the_adapter_directory
     adapter = train(epochs: 2)
 
-    metadata = JSON.parse(File.read(File.join(adapter.path, 'grain_metadata.json')))
+    metadata = JSON.parse(File.read(File.join(adapter.path, 'rpeft_metadata.json')))
 
     assert_equal 1, metadata['schema_version']
     assert_equal 'lora_adapter', metadata['kind']
@@ -96,7 +96,7 @@ class TestLoRATrain < GrainTest
   end
 
   def test_records_no_dataset_name_for_in_memory_records
-    adapter = Grain::LoRA.train(
+    adapter = RPEFT::LoRA.train(
       model: 'fake/model',
       dataset: [{text: 'from memory'}],
       output_dir: File.join(@workdir, 'adapter')
@@ -106,34 +106,34 @@ class TestLoRATrain < GrainTest
   end
 
   def test_creates_a_temporary_output_directory_by_default
-    adapter = Grain::LoRA.train(model: 'fake/model', dataset: @dataset)
+    adapter = RPEFT::LoRA.train(model: 'fake/model', dataset: @dataset)
 
     assert File.directory?(adapter.path)
-    assert_path_exists File.join(adapter.path, 'grain_metadata.json')
+    assert_path_exists File.join(adapter.path, 'rpeft_metadata.json')
   ensure
     FileUtils.remove_entry(adapter.path) if adapter
   end
 
   def test_rejects_a_non_positive_rank
-    error = assert_raises(Grain::ConfigurationError) { train(rank: 0) }
+    error = assert_raises(RPEFT::ConfigurationError) { train(rank: 0) }
 
     assert_match(/rank/, error.message)
   end
 
   def test_rejects_a_non_integer_rank
-    assert_raises(Grain::ConfigurationError) { train(rank: '8') }
+    assert_raises(RPEFT::ConfigurationError) { train(rank: '8') }
   end
 
   def test_rejects_an_out_of_range_dropout
-    assert_raises(Grain::ConfigurationError) { train(dropout: 1.5) }
+    assert_raises(RPEFT::ConfigurationError) { train(dropout: 1.5) }
   end
 
   def test_rejects_a_non_array_target_modules
-    assert_raises(Grain::ConfigurationError) { train(target_modules: 'q_proj') }
+    assert_raises(RPEFT::ConfigurationError) { train(target_modules: 'q_proj') }
   end
 
   def test_rejects_a_non_positive_epochs
-    assert_raises(Grain::ConfigurationError) { train(epochs: 0) }
+    assert_raises(RPEFT::ConfigurationError) { train(epochs: 0) }
   end
 
   def test_records_a_local_base_model_as_an_absolute_path
@@ -156,30 +156,30 @@ class TestLoRATrain < GrainTest
   end
 
   def test_rejects_wrong_argument_types_before_calling_the_backend
-    assert_raises(Grain::ConfigurationError) do
-      Grain::LoRA.train(model: nil, dataset: @dataset)
+    assert_raises(RPEFT::ConfigurationError) do
+      RPEFT::LoRA.train(model: nil, dataset: @dataset)
     end
-    assert_raises(Grain::ConfigurationError) do
-      Grain::LoRA.train(model: 'fake/model', dataset: 42)
+    assert_raises(RPEFT::ConfigurationError) do
+      RPEFT::LoRA.train(model: 'fake/model', dataset: 42)
     end
-    assert_raises(Grain::ConfigurationError) do
+    assert_raises(RPEFT::ConfigurationError) do
       train(output_dir: 42)
     end
-    assert_raises(Grain::ConfigurationError) do
+    assert_raises(RPEFT::ConfigurationError) do
       train(device: nil)
     end
     assert_empty @backend.calls
   end
 
   def test_rejects_an_unknown_device
-    error = assert_raises(Grain::ConfigurationError) { train(device: :tpu) }
+    error = assert_raises(RPEFT::ConfigurationError) { train(device: :tpu) }
 
     assert_match(/device/, error.message)
   end
 
   def test_raises_when_the_dataset_file_is_missing
-    error = assert_raises(Grain::DatasetError) {
-      Grain::LoRA.train(model: 'fake/model', dataset: File.join(@workdir, 'none.jsonl'))
+    error = assert_raises(RPEFT::DatasetError) {
+      RPEFT::LoRA.train(model: 'fake/model', dataset: File.join(@workdir, 'none.jsonl'))
     }
 
     assert_match(/not found/, error.message)
@@ -189,13 +189,13 @@ class TestLoRATrain < GrainTest
   def test_raises_when_the_dataset_is_empty
     File.write(@dataset, "\n")
 
-    assert_raises(Grain::DatasetError) { train }
+    assert_raises(RPEFT::DatasetError) { train }
   end
 
   def test_raises_when_the_dataset_is_not_jsonl
     File.write(@dataset, "plain text\n")
 
-    assert_raises(Grain::DatasetError) { train }
+    assert_raises(RPEFT::DatasetError) { train }
   end
 
   def test_disables_checkpoints_by_default
@@ -228,7 +228,7 @@ class TestLoRATrain < GrainTest
     FileUtils.mkdir_p(output)
     File.write(File.join(output, 'README.md'), "# Project\n")
 
-    error = assert_raises(Grain::ConfigurationError) { train(output_dir: output) }
+    error = assert_raises(RPEFT::ConfigurationError) { train(output_dir: output) }
 
     assert_match(/not empty/, error.message)
     assert_equal "# Project\n", File.read(File.join(output, 'README.md'))
@@ -257,8 +257,8 @@ class TestLoRATrain < GrainTest
   end
 
   def test_rejects_resume_without_an_explicit_output_dir
-    error = assert_raises(Grain::ConfigurationError) {
-      Grain::LoRA.train(model: 'fake/model', dataset: @dataset, resume: true)
+    error = assert_raises(RPEFT::ConfigurationError) {
+      RPEFT::LoRA.train(model: 'fake/model', dataset: @dataset, resume: true)
     }
 
     assert_match(/output_dir/, error.message)
@@ -290,22 +290,22 @@ class TestLoRATrain < GrainTest
     eval_file = File.join(@workdir, 'eval.jsonl')
     File.write(eval_file, %({"messages":[{"role":"user","content":"hi"}]}\n))
 
-    error = assert_raises(Grain::ConfigurationError) { train(eval_dataset: eval_file) }
+    error = assert_raises(RPEFT::ConfigurationError) { train(eval_dataset: eval_file) }
 
     assert_match(/eval_dataset format/, error.message)
   end
 
   def test_removes_the_temporary_copy_of_a_rejected_eval_dataset
-    before = Dir.glob(File.join(Dir.tmpdir, 'grain-dataset-*'))
+    before = Dir.glob(File.join(Dir.tmpdir, 'rpeft-dataset-*'))
 
-    assert_raises(Grain::ConfigurationError) do
+    assert_raises(RPEFT::ConfigurationError) do
       train(eval_dataset: [{messages: [{role: 'user', content: 'hi'}]}])
     end
-    assert_empty Dir.glob(File.join(Dir.tmpdir, 'grain-dataset-*')) - before
+    assert_empty Dir.glob(File.join(Dir.tmpdir, 'rpeft-dataset-*')) - before
   end
 
   def test_trains_from_an_array_of_records
-    Grain::LoRA.train(
+    RPEFT::LoRA.train(
       model: 'fake/model',
       dataset: [{text: 'from memory'}],
       output_dir: File.join(@workdir, 'adapter')
@@ -348,7 +348,7 @@ class TestLoRATrain < GrainTest
   end
 
   def test_removes_the_temporary_copy_of_in_memory_records_after_training
-    Grain::LoRA.train(
+    RPEFT::LoRA.train(
       model: 'fake/model',
       dataset: [{text: 'from memory'}],
       output_dir: File.join(@workdir, 'adapter')
@@ -371,39 +371,39 @@ class TestLoRATrain < GrainTest
   end
 
   def test_removes_the_temporary_copy_when_training_fails
-    failing = FakeBackend.new(error: Grain::TrainingError.new('boom'))
-    Grain.backend = failing
+    failing = FakeBackend.new(error: RPEFT::TrainingError.new('boom'))
+    RPEFT.backend = failing
 
-    assert_raises(Grain::TrainingError) do
-      Grain::LoRA.train(model: 'fake/model', dataset: [{text: 'x'}], output_dir: File.join(@workdir, 'adapter'), device: :cpu)
+    assert_raises(RPEFT::TrainingError) do
+      RPEFT::LoRA.train(model: 'fake/model', dataset: [{text: 'x'}], output_dir: File.join(@workdir, 'adapter'), device: :cpu)
     end
     refute File.exist?(File.dirname(failing.datasets.keys.first))
   end
 
   def test_failed_training_removes_its_temporary_adapter_directory
-    Grain.backend = FakeBackend.new(error: Grain::TrainingError.new('boom'))
-    before = Dir.glob(File.join(Dir.tmpdir, 'grain-adapter-*'))
+    RPEFT.backend = FakeBackend.new(error: RPEFT::TrainingError.new('boom'))
+    before = Dir.glob(File.join(Dir.tmpdir, 'rpeft-adapter-*'))
 
-    assert_raises(Grain::TrainingError) do
-      Grain::LoRA.train(model: 'fake/model', dataset: @dataset, device: :cpu)
+    assert_raises(RPEFT::TrainingError) do
+      RPEFT::LoRA.train(model: 'fake/model', dataset: @dataset, device: :cpu)
     end
-    assert_empty Dir.glob(File.join(Dir.tmpdir, 'grain-adapter-*')) - before
+    assert_empty Dir.glob(File.join(Dir.tmpdir, 'rpeft-adapter-*')) - before
   end
 
   def test_failed_training_keeps_an_explicit_output_dir_for_resuming
-    Grain.backend = FakeBackend.new(error: Grain::TrainingError.new('boom'))
+    RPEFT.backend = FakeBackend.new(error: RPEFT::TrainingError.new('boom'))
     output = File.join(@workdir, 'adapter')
 
-    assert_raises(Grain::TrainingError) do
+    assert_raises(RPEFT::TrainingError) do
       train(output_dir: output, device: :cpu)
     end
     assert_path_exists output
   end
 
   def test_keeps_the_temporary_copy_of_a_dataset_object_given_by_the_caller
-    dataset = Grain::Dataset.from_records([{text: 'reused'}])
+    dataset = RPEFT::Dataset.from_records([{text: 'reused'}])
 
-    Grain::LoRA.train(model: 'fake/model', dataset: dataset, output_dir: File.join(@workdir, 'adapter'))
+    RPEFT::LoRA.train(model: 'fake/model', dataset: dataset, output_dir: File.join(@workdir, 'adapter'))
 
     assert_path_exists dataset.path
   ensure
@@ -413,7 +413,7 @@ class TestLoRATrain < GrainTest
   def test_raises_when_the_dataset_lines_lack_a_text_key
     File.write(@dataset, %({"prompt":"hi"}\n))
 
-    error = assert_raises(Grain::DatasetError) { train }
+    error = assert_raises(RPEFT::DatasetError) { train }
 
     assert_match(/"text"/, error.message)
   end
@@ -421,7 +421,7 @@ class TestLoRATrain < GrainTest
   private
 
   def train(**options)
-    Grain::LoRA.train(
+    RPEFT::LoRA.train(
       model: 'fake/model', dataset: @dataset, output_dir: File.join(@workdir, 'adapter'), **options
     )
   end

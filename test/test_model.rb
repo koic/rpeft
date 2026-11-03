@@ -2,10 +2,10 @@
 
 require 'test_helper'
 
-class TestModel < GrainTest
+class TestModel < RPEFTTest
   def setup
     super
-    @workdir = Dir.mktmpdir('grain_test')
+    @workdir = Dir.mktmpdir('rpeft_test')
     @model_dir = File.join(@workdir, 'model')
     FileUtils.mkdir_p(@model_dir)
     File.write(File.join(@model_dir, 'config.json'), '{}')
@@ -17,14 +17,14 @@ class TestModel < GrainTest
   end
 
   def test_exposes_its_path_and_base_model
-    model = Grain::Model.new(path: @model_dir, base_model: 'fake/model')
+    model = RPEFT::Model.new(path: @model_dir, base_model: 'fake/model')
 
     assert_equal @model_dir, model.path
     assert_equal 'fake/model', model.base_model
   end
 
   def test_save_moves_the_model_directory
-    model = Grain::Model.new(path: @model_dir)
+    model = RPEFT::Model.new(path: @model_dir)
     dest = File.join(@workdir, 'moved')
 
     assert_same model, model.save(dest)
@@ -36,17 +36,17 @@ class TestModel < GrainTest
   def test_save_refuses_to_overwrite_an_unrelated_existing_directory
     dest = File.join(@workdir, 'existing')
     FileUtils.mkdir_p(dest)
-    model = Grain::Model.new(path: @model_dir)
+    model = RPEFT::Model.new(path: @model_dir)
 
-    assert_raises(Grain::ConfigurationError) { model.save(dest) }
+    assert_raises(RPEFT::ConfigurationError) { model.save(dest) }
   end
 
   def test_save_replaces_a_previously_saved_model
     dest = File.join(@workdir, 'saved')
     FileUtils.mkdir_p(dest)
-    Grain::Model.write_metadata(dest, base_model: 'fake/model')
+    RPEFT::Model.write_metadata(dest, base_model: 'fake/model')
     File.write(File.join(dest, 'stale'), 'old')
-    model = Grain::Model.new(path: @model_dir)
+    model = RPEFT::Model.new(path: @model_dir)
 
     model.save(dest)
 
@@ -57,18 +57,18 @@ class TestModel < GrainTest
   def test_save_of_a_hub_model_keeps_the_previously_saved_model
     dest = File.join(@workdir, 'saved')
     FileUtils.mkdir_p(dest)
-    Grain::Model.write_metadata(dest, base_model: 'fake/model')
-    model = Grain::Model.new(path: 'Qwen/Qwen2.5-Coder-0.5B')
+    RPEFT::Model.write_metadata(dest, base_model: 'fake/model')
+    model = RPEFT::Model.new(path: 'Qwen/Qwen2.5-Coder-0.5B')
 
-    error = assert_raises(Grain::Error) { model.save(dest) }
+    error = assert_raises(RPEFT::Error) { model.save(dest) }
 
     assert_match(/not a local directory/, error.message)
-    assert_path_exists File.join(dest, 'grain_metadata.json')
+    assert_path_exists File.join(dest, 'rpeft_metadata.json')
   end
 
   def test_save_to_its_own_path_keeps_the_model
-    Grain::Model.write_metadata(@model_dir, base_model: 'fake/model')
-    model = Grain::Model.new(path: @model_dir)
+    RPEFT::Model.write_metadata(@model_dir, base_model: 'fake/model')
+    model = RPEFT::Model.new(path: @model_dir)
 
     model.save(@model_dir)
 
@@ -80,37 +80,37 @@ class TestModel < GrainTest
     dest = File.join(@workdir, 'app')
     FileUtils.mkdir_p(dest)
     File.write(File.join(dest, 'config.json'), '{}')
-    model = Grain::Model.new(path: @model_dir)
+    model = RPEFT::Model.new(path: @model_dir)
 
-    assert_raises(Grain::ConfigurationError) do
+    assert_raises(RPEFT::ConfigurationError) do
       model.save(dest)
     end
     assert_path_exists File.join(dest, 'config.json')
   end
 
   def test_write_metadata_marks_a_merged_model
-    Grain::Model.write_metadata(@model_dir, base_model: 'fake/model')
+    RPEFT::Model.write_metadata(@model_dir, base_model: 'fake/model')
 
-    metadata = JSON.parse(File.read(File.join(@model_dir, 'grain_metadata.json')))
+    metadata = JSON.parse(File.read(File.join(@model_dir, 'rpeft_metadata.json')))
 
     assert_equal 'merged_model', metadata['kind']
     assert_equal 'fake/model', metadata['base_model']
   end
 
   def test_keeps_a_hub_model_id_verbatim
-    model = Grain::Model.new(path: 'Qwen/Qwen2.5-Coder-0.5B')
+    model = RPEFT::Model.new(path: 'Qwen/Qwen2.5-Coder-0.5B')
 
     assert_equal 'Qwen/Qwen2.5-Coder-0.5B', model.path
   end
 
   def test_generate_returns_the_completion_from_the_backend
-    model = Grain::Model.new(path: @model_dir)
+    model = RPEFT::Model.new(path: @model_dir)
 
     assert_equal 'fake completion', model.generate('User: hi')
   end
 
   def test_generate_sends_the_generation_configuration_to_the_backend
-    Grain::Model.new(path: @model_dir).generate('User: hi', max_new_tokens: 8)
+    RPEFT::Model.new(path: @model_dir).generate('User: hi', max_new_tokens: 8)
 
     name, config = @backend.calls.last
 
@@ -122,7 +122,7 @@ class TestModel < GrainTest
   end
 
   def test_generate_passes_an_explicit_device_through_without_detection
-    Grain::Model.new(path: @model_dir).generate('User: hi', device: :mps)
+    RPEFT::Model.new(path: @model_dir).generate('User: hi', device: :mps)
 
     refute(@backend.calls.any? { |call| call.first == :detect_device })
     _name, config = @backend.calls.last
@@ -130,19 +130,19 @@ class TestModel < GrainTest
   end
 
   def test_generate_rejects_a_non_positive_max_new_tokens
-    model = Grain::Model.new(path: @model_dir)
+    model = RPEFT::Model.new(path: @model_dir)
 
-    assert_raises(Grain::ConfigurationError) { model.generate('User: hi', max_new_tokens: 0) }
+    assert_raises(RPEFT::ConfigurationError) { model.generate('User: hi', max_new_tokens: 0) }
   end
 
   def test_generate_rejects_an_unknown_device
-    model = Grain::Model.new(path: @model_dir)
+    model = RPEFT::Model.new(path: @model_dir)
 
-    assert_raises(Grain::ConfigurationError) { model.generate('User: hi', device: :tpu) }
+    assert_raises(RPEFT::ConfigurationError) { model.generate('User: hi', device: :tpu) }
   end
 
   def test_generate_passes_sampling_options_when_given
-    Grain::Model.new(path: @model_dir).generate('User: hi', temperature: 0.7, top_p: 0.9, seed: 42)
+    RPEFT::Model.new(path: @model_dir).generate('User: hi', temperature: 0.7, top_p: 0.9, seed: 42)
 
     _name, config = @backend.calls.last
 
@@ -152,7 +152,7 @@ class TestModel < GrainTest
   end
 
   def test_generate_omits_sampling_options_by_default
-    Grain::Model.new(path: @model_dir).generate('User: hi')
+    RPEFT::Model.new(path: @model_dir).generate('User: hi')
 
     _name, config = @backend.calls.last
 
@@ -162,19 +162,19 @@ class TestModel < GrainTest
   end
 
   def test_generate_rejects_a_non_positive_temperature
-    model = Grain::Model.new(path: @model_dir)
+    model = RPEFT::Model.new(path: @model_dir)
 
-    assert_raises(Grain::ConfigurationError) { model.generate('User: hi', temperature: 0) }
+    assert_raises(RPEFT::ConfigurationError) { model.generate('User: hi', temperature: 0) }
   end
 
   def test_generate_rejects_an_out_of_range_top_p
-    model = Grain::Model.new(path: @model_dir)
+    model = RPEFT::Model.new(path: @model_dir)
 
-    assert_raises(Grain::ConfigurationError) { model.generate('User: hi', top_p: 1.5) }
+    assert_raises(RPEFT::ConfigurationError) { model.generate('User: hi', top_p: 1.5) }
   end
 
   def test_chat_returns_the_completion_from_the_backend
-    model = Grain::Model.new(path: @model_dir)
+    model = RPEFT::Model.new(path: @model_dir)
 
     assert_equal 'fake completion', model.chat([{role: 'user', content: 'hi'}])
   end
@@ -182,7 +182,7 @@ class TestModel < GrainTest
   def test_chat_sends_messages_instead_of_a_prompt
     messages = [{role: 'user', content: 'hi'}]
 
-    Grain::Model.new(path: @model_dir).chat(messages, max_new_tokens: 8, device: :cpu)
+    RPEFT::Model.new(path: @model_dir).chat(messages, max_new_tokens: 8, device: :cpu)
 
     name, config = @backend.calls.last
 
@@ -194,7 +194,7 @@ class TestModel < GrainTest
   end
 
   def test_chat_accepts_string_keyed_messages
-    Grain::Model.new(path: @model_dir).chat([{'role' => 'user', 'content' => 'hi'}])
+    RPEFT::Model.new(path: @model_dir).chat([{'role' => 'user', 'content' => 'hi'}])
 
     _name, config = @backend.calls.last
 
@@ -202,60 +202,60 @@ class TestModel < GrainTest
   end
 
   def test_chat_rejects_messages_that_are_not_an_array
-    model = Grain::Model.new(path: @model_dir)
+    model = RPEFT::Model.new(path: @model_dir)
 
-    assert_raises(Grain::ConfigurationError) do
+    assert_raises(RPEFT::ConfigurationError) do
       model.chat('hi')
     end
     assert_empty @backend.calls
   end
 
   def test_rejects_a_missing_path
-    assert_raises(Grain::ConfigurationError) { Grain::Model.new(path: nil) }
+    assert_raises(RPEFT::ConfigurationError) { RPEFT::Model.new(path: nil) }
   end
 
   def test_accepts_a_pathname
-    assert_equal @model_dir, Grain::Model.new(path: Pathname(@model_dir)).path
+    assert_equal @model_dir, RPEFT::Model.new(path: Pathname(@model_dir)).path
   end
 
   def test_save_rejects_a_missing_destination
-    model = Grain::Model.new(path: @model_dir)
+    model = RPEFT::Model.new(path: @model_dir)
 
-    assert_raises(Grain::ConfigurationError) do
+    assert_raises(RPEFT::ConfigurationError) do
       model.save(nil)
     end
     assert_path_exists @model_dir
   end
 
   def test_generate_rejects_a_missing_prompt_before_calling_the_backend
-    model = Grain::Model.new(path: @model_dir)
+    model = RPEFT::Model.new(path: @model_dir)
 
-    assert_raises(Grain::ConfigurationError) do
+    assert_raises(RPEFT::ConfigurationError) do
       model.generate(nil)
     end
-    assert_raises(Grain::ConfigurationError) do
+    assert_raises(RPEFT::ConfigurationError) do
       model.generate('')
     end
-    assert_raises(Grain::ConfigurationError) do
+    assert_raises(RPEFT::ConfigurationError) do
       model.generate(42)
     end
     assert_empty @backend.calls
   end
 
   def test_generate_rejects_a_nil_device_as_a_configuration_error
-    model = Grain::Model.new(path: @model_dir)
+    model = RPEFT::Model.new(path: @model_dir)
 
-    assert_raises(Grain::ConfigurationError) { model.generate('User: hi', device: nil) }
+    assert_raises(RPEFT::ConfigurationError) { model.generate('User: hi', device: nil) }
   end
 
   def test_generate_accepts_a_device_given_as_a_string
-    Grain::Model.new(path: @model_dir).generate('User: hi', device: 'mps')
+    RPEFT::Model.new(path: @model_dir).generate('User: hi', device: 'mps')
 
     assert_equal 'mps', @backend.calls.last.last['device']
   end
 
   def test_chat_accepts_the_system_user_and_assistant_roles
-    model = Grain::Model.new(path: @model_dir)
+    model = RPEFT::Model.new(path: @model_dir)
 
     model.chat(%w(system user assistant).map { |role| {role: role, content: 'hi'} })
 
@@ -263,29 +263,29 @@ class TestModel < GrainTest
   end
 
   def test_chat_rejects_an_unknown_role_before_calling_the_backend
-    model = Grain::Model.new(path: @model_dir)
+    model = RPEFT::Model.new(path: @model_dir)
 
-    assert_raises(Grain::ConfigurationError) do
+    assert_raises(RPEFT::ConfigurationError) do
       model.chat([{role: 'tool', content: 'hi'}])
     end
     assert_empty @backend.calls
   end
 
   def test_chat_rejects_messages_without_role_and_content
-    model = Grain::Model.new(path: @model_dir)
+    model = RPEFT::Model.new(path: @model_dir)
 
-    assert_raises(Grain::ConfigurationError) { model.chat([{speaker: 'user', text: 'hi'}]) }
+    assert_raises(RPEFT::ConfigurationError) { model.chat([{speaker: 'user', text: 'hi'}]) }
   end
 
   def test_chat_rejects_an_empty_transcript
-    model = Grain::Model.new(path: @model_dir)
+    model = RPEFT::Model.new(path: @model_dir)
 
-    assert_raises(Grain::ConfigurationError) { model.chat([]) }
+    assert_raises(RPEFT::ConfigurationError) { model.chat([]) }
   end
 
   def test_generate_rejects_a_non_integer_seed
-    model = Grain::Model.new(path: @model_dir)
+    model = RPEFT::Model.new(path: @model_dir)
 
-    assert_raises(Grain::ConfigurationError) { model.generate('User: hi', seed: 'x') }
+    assert_raises(RPEFT::ConfigurationError) { model.generate('User: hi', seed: 'x') }
   end
 end

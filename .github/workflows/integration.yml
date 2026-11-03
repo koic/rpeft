@@ -40,13 +40,13 @@ jobs:
       # LD_LIBRARY_PATH is where PyCall looks for the shared libpython that
       # setup-python installs outside the system library paths.
       - name: Report the environment
-        run: bundle exec exe/grain doctor
+        run: bundle exec exe/rpeft doctor
         env:
           PYTHON: ${{ env.pythonLocation }}/bin/python
           LD_LIBRARY_PATH: ${{ env.pythonLocation }}/lib
       - name: Run the integration tests
         run: bundle exec rake test:integration
         env:
-          GRAIN_INTEGRATION: "1"
+          RPEFT_INTEGRATION: "1"
           PYTHON: ${{ env.pythonLocation }}/bin/python
           LD_LIBRARY_PATH: ${{ env.pythonLocation }}/lib

@@ -2,7 +2,7 @@
 
 source 'https://rubygems.org'
 
-# Specify your gem's dependencies in grain.gemspec
+# Specify your gem's dependencies in rpeft.gemspec
 gemspec
 
 # Not a default gem since Ruby 4.0.0, but bin/console requires it.

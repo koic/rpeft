@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 require 'test_helper'
-require 'grain/backend/python'
+require 'rpeft/backend/python'
 
 class TestPythonBackend < Minitest::Test
   # Stands in for Python's atexit module.
@@ -14,7 +14,7 @@ class TestPythonBackend < Minitest::Test
   end
 
   def setup
-    @workdir = Dir.mktmpdir('grain_test')
+    @workdir = Dir.mktmpdir('rpeft_test')
   end
 
   def teardown
@@ -25,22 +25,22 @@ class TestPythonBackend < Minitest::Test
     python = fake_venv_python(with_pyvenv_cfg: true)
     expected = File.join(@workdir, 'venv', 'lib', 'python3.12', 'site-packages')
 
-    assert_equal expected, Grain::Backend::Python.venv_site_packages(python)
+    assert_equal expected, RPEFT::Backend::Python.venv_site_packages(python)
   end
 
   def test_venv_site_packages_returns_nil_without_pyvenv_cfg
     python = fake_venv_python(with_pyvenv_cfg: false)
 
-    assert_nil Grain::Backend::Python.venv_site_packages(python)
+    assert_nil RPEFT::Backend::Python.venv_site_packages(python)
   end
 
   def test_venv_site_packages_returns_nil_for_nil_path
-    assert_nil Grain::Backend::Python.venv_site_packages(nil)
+    assert_nil RPEFT::Backend::Python.venv_site_packages(nil)
   end
 
   def test_default_python_prefers_the_python_environment_variable
     with_env('PYTHON' => '/opt/custom/python') do
-      assert_equal '/opt/custom/python', Grain::Backend::Python.default_python
+      assert_equal '/opt/custom/python', RPEFT::Backend::Python.default_python
     end
   end
 
@@ -52,7 +52,7 @@ class TestPythonBackend < Minitest::Test
 
     with_env('PYTHON' => nil, 'BUNDLE_GEMFILE' => gemfile) do
       Dir.chdir(subdir) do
-        assert_equal File.join(@workdir, '.venv', 'bin', 'python'), Grain::Backend::Python.default_python
+        assert_equal File.join(@workdir, '.venv', 'bin', 'python'), RPEFT::Backend::Python.default_python
       end
     end
   end
@@ -62,21 +62,21 @@ class TestPythonBackend < Minitest::Test
 
     with_env('PYTHON' => nil, 'BUNDLE_GEMFILE' => nil) do
       Dir.chdir(@workdir) do
-        assert_nil Grain::Backend::Python.default_python
+        assert_nil RPEFT::Backend::Python.default_python
       end
     end
   end
 
   def test_default_python_returns_nil_without_a_venv_or_environment_variable
     with_env('PYTHON' => nil, 'BUNDLE_GEMFILE' => File.join(@workdir, 'Gemfile')) do
-      assert_nil Grain::Backend::Python.default_python
+      assert_nil RPEFT::Backend::Python.default_python
     end
   end
 
   def test_run_exit_handlers_runs_the_python_atexit_handlers
     atexit = FakeAtexit.new
 
-    Grain::Backend::Python.run_exit_handlers(atexit)
+    RPEFT::Backend::Python.run_exit_handlers(atexit)
 
     assert atexit.ran
   end
@@ -87,11 +87,11 @@ class TestPythonBackend < Minitest::Test
       raise 'handler failed'
     end
 
-    assert_nil Grain::Backend::Python.run_exit_handlers(atexit)
+    assert_nil RPEFT::Backend::Python.run_exit_handlers(atexit)
   end
 
   def test_install_exit_hook_runs_the_python_atexit_handlers_at_exit
-    backend = Grain::Backend::Python.new
+    backend = RPEFT::Backend::Python.new
     hooks = []
     backend.define_singleton_method(:at_exit) do |&hook|
       hooks << hook

@@ -3,21 +3,21 @@
 require 'test_helper'
 
 class TestErrorTranslation < Minitest::Test
-  TRANSLATION = Grain::Backend::ErrorTranslation
+  TRANSLATION = RPEFT::Backend::ErrorTranslation
 
   def test_maps_each_stage_to_its_error_class
     {
-      'dependency' => Grain::DependencyError,
-      'device' => Grain::DependencyError,
-      'model_load' => Grain::ModelLoadError,
-      'dataset' => Grain::DatasetError,
-      'training' => Grain::TrainingError,
-      'adapter_save' => Grain::TrainingError,
-      'merge' => Grain::MergeError,
-      'generation' => Grain::GenerationError
+      'dependency' => RPEFT::DependencyError,
+      'device' => RPEFT::DependencyError,
+      'model_load' => RPEFT::ModelLoadError,
+      'dataset' => RPEFT::DatasetError,
+      'training' => RPEFT::TrainingError,
+      'adapter_save' => RPEFT::TrainingError,
+      'merge' => RPEFT::MergeError,
+      'generation' => RPEFT::GenerationError
     }.each do |stage, error_class|
       translated = TRANSLATION.translate(RuntimeError.new("[stage:#{stage}] boom"),
-                                         default: Grain::Error)
+                                         default: RPEFT::Error)
 
       assert_instance_of error_class, translated
       assert_equal 'boom', translated.message
@@ -25,17 +25,17 @@ class TestErrorTranslation < Minitest::Test
   end
 
   def test_falls_back_to_the_default_class_without_a_stage_token
-    translated = TRANSLATION.translate(RuntimeError.new('boom'), default: Grain::TrainingError)
+    translated = TRANSLATION.translate(RuntimeError.new('boom'), default: RPEFT::TrainingError)
 
-    assert_instance_of Grain::TrainingError, translated
+    assert_instance_of RPEFT::TrainingError, translated
     assert_equal 'boom', translated.message
   end
 
   def test_falls_back_to_the_default_class_for_an_unknown_stage
     translated = TRANSLATION.translate(RuntimeError.new('[stage:mystery] boom'),
-                                       default: Grain::MergeError)
+                                       default: RPEFT::MergeError)
 
-    assert_instance_of Grain::MergeError, translated
+    assert_instance_of RPEFT::MergeError, translated
   end
 
   def test_preserves_the_original_error_as_the_cause_when_raised_in_a_rescue
@@ -45,9 +45,9 @@ class TestErrorTranslation < Minitest::Test
       begin
         raise original
       rescue RuntimeError => e
-        raise TRANSLATION.translate(e, default: Grain::TrainingError)
+        raise TRANSLATION.translate(e, default: RPEFT::TrainingError)
       end
-    rescue Grain::TrainingError => e
+    rescue RPEFT::TrainingError => e
       e
     end
 

@@ -2,7 +2,7 @@
 
 require 'test_helper'
 
-class TestCLIDoctor < GrainTest
+class TestCLIDoctor < RPEFTTest
   def test_reports_a_healthy_environment
     status, out, = run_cli(['doctor'])
 
@@ -16,7 +16,7 @@ class TestCLIDoctor < GrainTest
   def test_reports_missing_python_packages
     diagnostics = FakeBackend.healthy_diagnostics
     diagnostics['libraries']['peft'] = {'installed' => false, 'version' => nil}
-    Grain.backend = FakeBackend.new(responses: {diagnostics: diagnostics})
+    RPEFT.backend = FakeBackend.new(responses: {diagnostics: diagnostics})
 
     status, out, = run_cli(['doctor'])
 
@@ -29,7 +29,7 @@ class TestCLIDoctor < GrainTest
   def test_reports_outdated_python_packages
     diagnostics = FakeBackend.healthy_diagnostics
     diagnostics['libraries']['torch'] = {'installed' => true, 'version' => '2.5.1', 'minimum' => '2.6', 'outdated' => true}
-    Grain.backend = FakeBackend.new(responses: {diagnostics: diagnostics})
+    RPEFT.backend = FakeBackend.new(responses: {diagnostics: diagnostics})
 
     status, out, = run_cli(['doctor'])
 
@@ -40,8 +40,8 @@ class TestCLIDoctor < GrainTest
   end
 
   def test_reports_an_unusable_backend
-    Grain.backend = FakeBackend.new(
-      error: Grain::DependencyError.new('Python interpreter not found')
+    RPEFT.backend = FakeBackend.new(
+      error: RPEFT::DependencyError.new('Python interpreter not found')
     )
 
     status, out, = run_cli(['doctor'])
