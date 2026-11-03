@@ -1,5 +1,8 @@
 # RPEFT
 
+[![Gem Version](https://badge.fury.io/rb/rpeft.svg)](https://badge.fury.io/rb/rpeft)
+[![CI](https://github.com/koic/rpeft/actions/workflows/main.yml/badge.svg)](https://github.com/koic/rpeft/actions/workflows/main.yml)
+
 RPEFT brings LoRA fine-tuning of large language models to Ruby. It provides an API and CLI that model the LoRA lifecycle,
 while the heavy lifting is done by the Python ecosystem (PyTorch, Hugging Face Transformers, PEFT, Datasets, Accelerate) through PyCall.
 It is an independent project, not affiliated with Hugging Face.
