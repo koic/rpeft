@@ -61,8 +61,8 @@ module RPEFT
       def run_lora(argv, out:, err:)
         subcommand, *rest = argv
         case subcommand
-        when 'train' then LoraTrain.run(rest, out: out, err: err)
-        when 'merge' then LoraMerge.run(rest, out: out, err: err)
+        when 'train' then LoRATrain.run(rest, out: out, err: err)
+        when 'merge' then LoRAMerge.run(rest, out: out, err: err)
         when nil, 'help', '--help', '-h'
           out.puts LORA_USAGE
           0

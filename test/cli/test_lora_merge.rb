@@ -2,7 +2,7 @@
 
 require 'test_helper'
 
-class TestCLILoraMerge < RPEFTTest
+class TestCLILoRAMerge < RPEFTTest
   def setup
     super
     @workdir = Dir.mktmpdir('rpeft_test')

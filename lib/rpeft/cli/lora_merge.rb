@@ -3,7 +3,7 @@
 module RPEFT
   module CLI
     # @api private
-    class LoraMerge < Command
+    class LoRAMerge < Command
       REQUIRED_OPTIONS = %i(adapter output).freeze
 
       private

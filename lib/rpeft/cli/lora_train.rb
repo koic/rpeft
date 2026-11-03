@@ -3,7 +3,7 @@
 module RPEFT
   module CLI
     # @api private
-    class LoraTrain < Command
+    class LoRATrain < Command
       PASSTHROUGH_OPTIONS = %i(rank alpha dropout target_modules epochs batch_size
                                learning_rate max_length device).freeze
       REQUIRED_OPTIONS = %i(model dataset output).freeze
