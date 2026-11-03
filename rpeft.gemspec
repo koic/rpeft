@@ -19,11 +19,10 @@ Gem::Specification.new do |spec|
   spec.metadata['allowed_push_host'] = 'https://rubygems.org'
 
   spec.metadata['homepage_uri'] = spec.homepage
-  spec.metadata['source_code_uri'] = 'https://github.com/koic/rpeft'
   spec.metadata['changelog_uri'] = 'https://github.com/koic/rpeft/blob/master/CHANGELOG.md'
   spec.metadata['rubygems_mfa_required'] = 'true'
 
-  spec.files = Dir['lib/**/*.rb', 'python/**/*.py', 'exe/*']
+  spec.files = Dir.glob(%w(lib/**/*.rb python/**/*.py exe/*), base: __dir__)
   spec.extra_rdoc_files = ['LICENSE.txt', 'README.md']
   spec.bindir = 'exe'
   spec.executables = spec.files.grep(%r|\Aexe/|) { |f| File.basename(f) }
