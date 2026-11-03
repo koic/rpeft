@@ -17,28 +17,25 @@ Elsewhere the script uses CUDA when available and falls back to CPU, which is mu
 ## Output
 
 The output below comes from an Apple Silicon Mac (MPS); other devices or library versions may word the answers differently.
-The question is the same before and after: `User: How do I reverse an array?\nAssistant:`. The base model answers with an explanation and Python code:
+The question is the same before and after: `User: How do I find the minimum value in an array?\nAssistant:`.
+It is not in `ruby_answers.jsonl`, so the answer shows what the model learned rather than what it memorized.
+The base model answers with a step-by-step explanation:
 
-````text
+```text
 --- Before (base model) ---
- To reverse an array in Python, you can use the following code:
+ To find the minimum value in an array, you can use the following steps:
 
-```python
-def reverse_array(arr):
-    return arr[::-1]
-
-arr = [1, 2, 3, 4, 5]
-reversed_arr = reverse_array(arr)
-print(reversed_arr)
+1. Initialize a variable to store the minimum value, let's call it `min_value`.
+2. Iterate through each element in the array using a loop.
+3. For each element, compare it with the current minimum
 ```
-````
 
 The fine-tuned model answers with a bare Ruby snippet and its result, the shape every answer in the dataset has:
 
 ```text
 --- After (fine-tuned model) ---
- [1, 2, 3].reverse
-# => [3, 2, 1]
+ [1, 2, 3, 4, 5].min
+# => 1
 ```
 
 Training reports `trainable params: 540,672 || all params: 494,573,440 || trainable%: 0.1093` along the way: only about 0.11% of the parameters are updated.

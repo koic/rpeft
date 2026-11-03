@@ -121,10 +121,10 @@ so scripts can be re-run, while any other existing path is refused.
 The model can be a merged model directory or a Hugging Face model id, which makes a before and after comparison one call each:
 
 ```ruby
-prompt = "User: How do I reverse an array?\nAssistant:"
+prompt = "User: How do I find the minimum value in an array?\nAssistant:"
 
 base = RPEFT::Model.new(path: 'Qwen/Qwen2.5-Coder-0.5B')
-base.generate(prompt, max_new_tokens: 64)  # An explanation and Python code from the base model
+base.generate(prompt, max_new_tokens: 64)  # A step-by-step explanation from the base model
 
 model = adapter.merge
 model.generate(prompt, max_new_tokens: 64) # Ruby code from the fine-tuned model
@@ -225,7 +225,7 @@ RPEFT::LoRA.train(
 ```
 
 A useful fine-tuning dataset teaches the model something it does not already do. The `examples/ruby_answers.jsonl` dataset in the repository teaches the model to answer programming questions with Ruby code only:
-the base model replies with an explanation and Python code, while the fine-tuned model replies with a bare snippet and a `# =>` comment. The effect is visible at a glance in any spoken language,
+the base model replies with an explanation, often followed by Python code, while the fine-tuned model replies with a bare snippet and a `# =>` comment. The effect is visible at a glance in any spoken language,
 because the difference is the shape of the output rather than its wording.
 
 ### Devices and Apple Silicon
@@ -290,7 +290,7 @@ $ rpeft lora merge \
 ```console
 $ rpeft generate \
     --model ruby-model \
-    --prompt $'User: How do I reverse an array?\nAssistant:'
+    --prompt $'User: How do I find the minimum value in an array?\nAssistant:'
 ```
 
 `--model` also accepts a Hugging Face model id, so the same command shows the base model's output for comparison.
@@ -300,7 +300,7 @@ Passing `--adapter` instead generates with the adapter applied on top of its bas
 ```console
 $ rpeft generate \
     --adapter ruby-lora \
-    --prompt $'User: How do I reverse an array?\nAssistant:'
+    --prompt $'User: How do I find the minimum value in an array?\nAssistant:'
 ```
 
 `rpeft doctor` and `rpeft version` are also available.

@@ -12,7 +12,7 @@
 require 'rpeft'
 
 BASE_MODEL = 'Qwen/Qwen2.5-Coder-0.5B'
-PROMPT = "User: How do I reverse an array?\nAssistant:"
+PROMPT = "User: How do I find the minimum value in an array?\nAssistant:"
 
 puts "Device: #{RPEFT.device}"
 
