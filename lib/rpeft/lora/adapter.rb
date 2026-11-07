@@ -84,8 +84,8 @@ module RPEFT
         self
       end
 
-      # Merges the learned B A update into the base model weights
-      # (W = W0 + B A) and returns the resulting standalone Model.
+      # Merges the learned update into the base model weights
+      # (W = W0 + (alpha / r) B A) and returns the resulting standalone Model.
       def merge(output_dir: nil)
         unless base_model
           raise MergeError, 'base model is unknown; pass base_model: to Adapter.load ' \

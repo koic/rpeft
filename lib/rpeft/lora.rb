@@ -7,11 +7,12 @@ require 'tmpdir'
 
 module RPEFT
   # LoRA fine-tuning. Keeps the base model weights W0 frozen and learns
-  # a low-rank update delta W ~= B A of rank r:
+  # a low-rank update of rank r, scaled by alpha / r:
   #
-  #   W = W0 + B A
+  #   W = W0 + delta W
+  #   delta W ~= (alpha / r) B A
   #
-  # The `rank:` option is exactly that r.
+  # The `rank:` and `alpha:` options are exactly that r and alpha.
   module LoRA
     POSITIVE_INTEGER_OPTIONS = %i(rank epochs batch_size max_length).freeze
     POSITIVE_NUMBER_OPTIONS = %i(alpha learning_rate).freeze

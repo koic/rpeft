@@ -18,16 +18,16 @@ It is an independent project, not affiliated with Hugging Face.
 
 ## The model behind the API
 
-LoRA keeps the base model weights $W_0$ frozen and learns a low-rank update of rank $r$:
+LoRA keeps the base model weights $W_0$ frozen and learns a low-rank update of rank $r$, scaled by $\alpha / r$:
 
 ```math
 \begin{aligned}
 W &= W_0 + \Delta W \\
-\Delta W &\approx BA
+\Delta W &\approx \frac{\alpha}{r} BA
 \end{aligned}
 ```
 
-$A$ and $B$ are small matrices that together typically hold well under 1% of the model's parameters. Training produces them; merging adds $BA$ back into $W_0$.
+$A$ and $B$ are small matrices that together typically hold well under 1% of the model's parameters. Training produces them; merging adds $\frac{\alpha}{r} BA$ back into $W_0$.
 The API is the same shape:
 
 ```mermaid
@@ -37,7 +37,7 @@ flowchart LR
 
 Merging is optional: an adapter can also generate on top of its base model as is.
 
-The [`rank:` option](#training-options) of `RPEFT::LoRA.train` is exactly the $r$ above.
+The [`rank:` and `alpha:` options](#training-options) of `RPEFT::LoRA.train` are exactly the $r$ and $\alpha$ above.
 
 ## Requirements
 
@@ -99,7 +99,7 @@ adapter = RPEFT::LoRA.train(
 )
 adapter.save('./ruby-lora')
 
-model = adapter.merge # W = W0 + B A
+model = adapter.merge # W = W0 + (alpha / r) B A
 model.save('./ruby-model')
 ```
 
@@ -182,7 +182,7 @@ The rule behind this also applies to choosing a dataset format: the prompt at in
 | Option            | Default | Meaning                                                                                 |
 | ----------------- | ------- | --------------------------------------------------------------------------------------- |
 | `rank:`           | `8`     | LoRA rank $r$, the rank of the low-rank update $BA$                                     |
-| `alpha:`          | `16`    | LoRA scaling factor (`lora_alpha` in PEFT)                                              |
+| `alpha:`          | `16`    | LoRA scaling factor $\alpha$ (`lora_alpha` in PEFT)                                     |
 | `dropout:`        | `0.05`  | LoRA dropout (`lora_dropout` in PEFT)                                                   |
 | `target_modules:` | `nil`   | Modules to adapt, e.g. `%w(q_proj v_proj)`. `nil` uses PEFT's per-architecture defaults |
 | `epochs:`         | `3`     | Training epochs                                                                         |

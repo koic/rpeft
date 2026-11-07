@@ -26,7 +26,7 @@ module RPEFT
           o.on('--rank N', Integer, 'LoRA rank r (default: 8)') do |v|
             options[:rank] = v
           end
-          o.on('--alpha N', Float, 'LoRA alpha (default: 16)') do |v|
+          o.on('--alpha N', Float, 'LoRA scaling factor alpha (default: 16)') do |v|
             options[:alpha] = v
           end
           o.on('--dropout F', Float, 'LoRA dropout (default: 0.05)') do |v|
