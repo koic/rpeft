@@ -265,6 +265,28 @@ class TestLoRAIntegration < Minitest::Test
     assert_equal 1, skipped
   end
 
+  def test_messages_examples_render_plainly_without_a_chat_template
+    tokenizer, data = tokenizer_and_data
+    tokenizer.chat_template = nil
+    chat = PyCall.import_module('rpeft_backend._chat')
+    messages = [{'role' => 'user', 'content' => 'a question'}, {'role' => 'assistant', 'content' => 'the answer'}]
+    path = write_jsonl('chat.jsonl', [{messages: messages}])
+
+    assert_equal "user: a question\nassistant: the answer", chat.render(tokenizer, messages).to_s
+    assert_equal "user: a question\nassistant:", chat.render(tokenizer, messages.first(1), true).to_s
+
+    dataset, = data.load_tokenized_dataset(path, tokenizer, 'text', 64, 'messages').to_a
+    ids = dataset[0]['input_ids'].to_a
+    labels = dataset[0]['labels'].to_a
+    prompt_length = tokenizer.call("user: a question\nassistant:")['input_ids'].to_a.size
+
+    # The plain rendering holds no special tokens, so tokenizing it adds the tokenizer's own, a single BOS here.
+    assert_equal tokenizer.call("user: a question\nassistant: the answer")['input_ids'].to_a, ids
+    assert_equal [-100] * prompt_length, labels.first(prompt_length)
+    refute_empty labels.drop(prompt_length)
+    assert_equal ids.drop(prompt_length), labels.drop(prompt_length)
+  end
+
   def test_messages_examples_refuse_a_template_that_rewrites_earlier_turns
     tokenizer, data = tokenizer_and_data
     tokenizer.chat_template = <<~JINJA.delete("\n")
