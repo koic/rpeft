@@ -23,4 +23,7 @@ module RPEFT
 
   # Text generation failed.
   class GenerationError < Error; end
+
+  # Exporting a model to another format, such as GGUF, failed in the external tool doing the conversion.
+  class ExportError < Error; end
 end

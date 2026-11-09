@@ -12,6 +12,7 @@ It is an independent project, not affiliated with Hugging Face.
 - LoRA fine-tuning from JSONL files or Ruby Enumerables, in plain text, instruction, and chat formats
 - Merging an adapter into its base model to produce a standalone model
 - Generation and chat with a merged model, a Hugging Face model id, or an adapter on top of its base model
+- GGUF export of a merged model for llama.cpp, Ollama, and other local runtimes
 - Apple Silicon (MPS) as a first-class target, with CUDA and CPU auto-detected
 - Validation loss, per-epoch checkpoints, and resuming
 - A CLI for training, merging, and generation, and `rpeft doctor` to check the Python environment
@@ -248,6 +249,59 @@ Apple Silicon Macs (M1 and later) are a first-class target: small models such as
 Training uses float32 on MPS (half precision there is numerically fragile), bfloat16 on capable CUDA GPUs, and `PYTORCH_ENABLE_MPS_FALLBACK=1` is set automatically for
 operators MPS does not implement. Merging always runs on CPU, which is the memory-safest place for it.
 
+### Exporting to GGUF
+
+A merged model can be written to a single GGUF file for llama.cpp, Ollama, and other local runtimes.
+The conversion is done by llama.cpp's own `convert_hf_to_gguf.py`, which is not published as a package, so RPEFT needs a llama.cpp checkout:
+
+```console
+$ git clone https://github.com/ggml-org/llama.cpp ~/src/llama.cpp
+$ .venv/bin/pip install sentencepiece # or, with uv: uv pip install sentencepiece
+```
+
+```ruby
+model = adapter.merge(output_dir: './ruby-model')
+model.export_gguf('./ruby-model.gguf', llama_cpp: '~/src/llama.cpp') # => "/path/to/ruby-model.gguf"
+```
+
+`llama_cpp:` defaults to the `LLAMA_CPP_DIR` environment variable. The converter runs in its own process with the Python RPEFT uses,
+so the packages it needs beyond RPEFT's own go into the same environment. `sentencepiece` is one of them even for models without
+a SentencePiece tokenizer, such as Qwen2.5, because the converter imports it before looking for one.
+
+`quantize:` picks the type of the weights. `:q8_0` (the default), `:f16`, and `:bf16` are written by the converter directly.
+`:q6_k`, `:q5_k_m`, and `:q4_k_m` are smaller and also need `llama-quantize`, found on `PATH` (`brew install llama.cpp`), in the checkout's `build/bin`,
+or given as `llama_quantize:`. Small models lose more to quantization, which is why the default stays at 8 bits.
+
+Export a model you merged yourself, from a directory no one else writes to while the export runs; an adapter is merged first.
+An existing output file is never overwritten, and a failed export leaves nothing behind.
+
+A GGUF file carries the model's chat template, and Ollama (checked with 0.33.1) wraps every prompt in it, even when a Modelfile gives a `TEMPLATE` of its own.
+A model fine-tuned on plain text, like the example above, expects the prompt as it was in training, so export it without the chat template:
+
+```ruby
+model.export_gguf('./ruby-model.gguf', chat_template: false, llama_cpp: '~/src/llama.cpp')
+```
+
+This removes the default chat template, the one Ollama used in that check, and the list of named ones; templates stored under their own names, such as one for tool use, stay.
+Leaving it out uses `gguf_new_metadata.py` from the same checkout and briefly needs room for one more copy of the file.
+Keep the chat template for a model fine-tuned on chat-format data: Ollama then needs a Modelfile with the `FROM` line alone, and its chat answers as `#chat` does.
+
+To run a file exported without its chat template in Ollama, point a Modelfile at it and give a template that passes the prompt through:
+
+```text
+FROM ./ruby-model.gguf
+TEMPLATE {{ .Prompt }}
+```
+
+```console
+$ ollama create ruby-model -f Modelfile
+$ ollama run ruby-model $'User: How do I find the minimum value in an array?\nAssistant:'
+```
+
+The converter loads some tokenizers with `trust_remote_code=True`, so it runs offline with empty Hugging Face caches of its own, and a model directory is refused when it holds Python code,
+`auto_map` in a JSON file, a link leading out of it or to a directory, a hard link, or a special file. Any of these could run code or carry another file, such as a credential, into the GGUF file.
+The checks run before the converter starts, which is why the directory must not change during the export.
+
 ### Environment check
 
 ```ruby
@@ -264,18 +318,23 @@ peft:         OK 0.20.0
 datasets:     OK 5.0.1
 accelerate:   OK 1.14.0
 Device:       mps (CUDA: no, MPS: yes)
+llama.cpp:    OK /Users/you/src/llama.cpp
+Quantizer:    OK /opt/homebrew/bin/llama-quantize
 Status:       OK
 ```
+
+The llama.cpp lines are optional, for GGUF export only, and never affect the status.
 
 ### Errors
 
 Python exceptions never surface raw. They are translated into `RPEFT::DependencyError`, `RPEFT::ModelLoadError`, `RPEFT::DatasetError`, `RPEFT::TrainingError`,
 `RPEFT::MergeError`, or `RPEFT::GenerationError`, and the original Python error (with its traceback) stays reachable via `error.cause`.
+A failing llama.cpp tool during GGUF export raises `RPEFT::ExportError` with the end of the tool's output.
 Invalid arguments are rejected in Ruby with `RPEFT::ConfigurationError` before the backend is called.
 
 ## CLI
 
-The CLI covers the core of the lifecycle: training, merging, and generation from a prompt.
+The CLI covers the core of the lifecycle: training, merging, generation from a prompt, and GGUF export.
 Validation datasets, checkpoints, and chat are available from the Ruby API only.
 
 ```console
@@ -309,6 +368,16 @@ Passing `--adapter` instead generates with the adapter applied on top of its bas
 $ rpeft generate \
     --adapter ruby-lora \
     --prompt $'User: How do I find the minimum value in an array?\nAssistant:'
+```
+
+A merged model is exported to GGUF with `rpeft export gguf`, which takes the same choices as `export_gguf`:
+
+```console
+$ rpeft export gguf \
+    --model ruby-model \
+    --output ruby-model.gguf \
+    --no-chat-template \
+    --llama-cpp ~/src/llama.cpp
 ```
 
 `rpeft doctor` and `rpeft version` are also available.

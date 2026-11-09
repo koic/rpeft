@@ -12,7 +12,8 @@ module RPEFT
     end
 
     def report
-      base = {'ruby' => {'version' => RUBY_VERSION, 'rpeft' => VERSION}}
+      # The llama.cpp tools are optional, for GGUF export only, so they never affect the status.
+      base = {'ruby' => {'version' => RUBY_VERSION, 'rpeft' => VERSION}, 'gguf' => GGUF.tools}
       begin
         diagnostics = @backend.diagnostics
       rescue Error => e

@@ -18,6 +18,11 @@ Lint/AmbiguousOperatorPrecedence:
 Metrics:
   Enabled: false
 
+# GGUF's own name for the 8-bit type, which the quantize: option takes as is.
+Naming/VariableNumber:
+  AllowedIdentifiers:
+    - q8_0
+
 Style/BlockDelimiters:
   EnforcedStyle: semantic
 

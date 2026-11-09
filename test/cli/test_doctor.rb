@@ -13,6 +13,57 @@ class TestCLIDoctor < RPEFTTest
     assert_includes out, 'OK'
   end
 
+  def test_reports_the_optional_llama_cpp_tools_without_affecting_the_status
+    env = save_env('LLAMA_CPP_DIR', 'PATH')
+    ENV.delete('LLAMA_CPP_DIR')
+    ENV['PATH'] = ''
+
+    status, out, = run_cli(['doctor'])
+
+    assert_equal 0, status
+    assert_includes out, 'llama.cpp:    not configured (optional, set LLAMA_CPP_DIR for GGUF export)'
+    assert_includes out, 'Quantizer:    no llama-quantize'
+  ensure
+    restore_env(env)
+  end
+
+  def test_reports_a_llama_cpp_dir_without_the_converter
+    env = save_env('LLAMA_CPP_DIR')
+    Dir.mktmpdir('rpeft_test') do |dir|
+      ENV['LLAMA_CPP_DIR'] = dir
+
+      _status, out, = run_cli(['doctor'])
+
+      assert_includes out, "llama.cpp:    NG no convert_hf_to_gguf.py in #{dir}"
+    end
+  ensure
+    restore_env(env)
+  end
+
+  def test_escapes_control_characters_from_the_environment
+    env = save_env('LLAMA_CPP_DIR')
+    ENV['LLAMA_CPP_DIR'] = "/tmp/llama\e]52;c;Zm9v\a.cpp"
+
+    _status, out, = run_cli(['doctor'])
+
+    refute_includes out, "\e"
+    assert_includes out, 'llama\\x1B]52;c;Zm9v\\x07.cpp'
+  ensure
+    restore_env(env)
+  end
+
+  def test_keeps_running_with_a_llama_cpp_dir_that_cannot_be_expanded
+    env = save_env('LLAMA_CPP_DIR')
+    ENV['LLAMA_CPP_DIR'] = '~rpeft_no_such_user/llama.cpp'
+
+    status, out, = run_cli(['doctor'])
+
+    assert_equal 0, status
+    assert_includes out, 'llama.cpp:    NG no convert_hf_to_gguf.py in ~rpeft_no_such_user/llama.cpp'
+  ensure
+    restore_env(env)
+  end
+
   def test_reports_missing_python_packages
     diagnostics = FakeBackend.healthy_diagnostics
     diagnostics['libraries']['peft'] = {'installed' => false, 'version' => nil}

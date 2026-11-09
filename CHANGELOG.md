@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- GGUF export of a merged model (`RPEFT::Model#export_gguf`, `rpeft export gguf`) through llama.cpp's own tools,
+  with Q8_0 by default and the K-quant types through `llama-quantize`. `chat_template: false` (`--no-chat-template`) leaves out
+  the chat template for a model fine-tuned on plain text. `rpeft doctor` reports the llama.cpp tools it finds
+
 ## 0.2.0 (2026-11-10)
 
 Upgrading changes what instruction and chat datasets train on, so the same data and options give a different adapter than in 0.1.0 (see the first entry).

@@ -27,6 +27,22 @@ class RPEFTTest < Minitest::Test
 
   private
 
+  # The current values of the environment variables, unset ones as nil, for restore_env.
+  def save_env(*keys)
+    keys.to_h { |key| [key, ENV.fetch(key, nil)] }
+  end
+
+  # ENV.update alone would leave behind a variable that was unset when save_env ran.
+  def restore_env(saved)
+    saved.each do |key, value|
+      if value.nil?
+        ENV.delete(key)
+      else
+        ENV[key] = value
+      end
+    end
+  end
+
   def run_cli(argv)
     out = StringIO.new
     err = StringIO.new

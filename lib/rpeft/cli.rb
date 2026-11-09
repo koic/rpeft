@@ -6,6 +6,7 @@ require_relative 'cli/lora_train'
 require_relative 'cli/lora_merge'
 require_relative 'cli/generate'
 require_relative 'cli/doctor'
+require_relative 'cli/export_gguf'
 
 module RPEFT
   # Command line interface. Commands go through the public Ruby API only,
@@ -18,6 +19,7 @@ module RPEFT
         lora train   Fine-tune a base model with LoRA
         lora merge   Merge a LoRA adapter into its base model
         generate     Generate text from a base or fine-tuned model
+        export gguf  Export a model to a GGUF file for llama.cpp and Ollama
         doctor       Diagnose the Python environment
         version      Print the RPEFT version
         help         Show this message
@@ -33,11 +35,19 @@ module RPEFT
         merge   Merge a LoRA adapter into its base model
     USAGE
 
+    EXPORT_USAGE = <<~USAGE
+      Usage: rpeft export <format> [options]
+
+      Formats:
+        gguf    Export a model to a GGUF file for llama.cpp and Ollama
+    USAGE
+
     class << self
       def run(argv, out: $stdout, err: $stderr)
         command, *rest = argv
         case command
         when 'lora' then run_lora(rest, out: out, err: err)
+        when 'export' then run_export(rest, out: out, err: err)
         when 'generate' then Generate.run(rest, out: out, err: err)
         when 'doctor' then Doctor.run(rest, out: out, err: err)
         when 'version', '--version', '-v'
@@ -69,6 +79,21 @@ module RPEFT
         else
           err.puts "rpeft: unknown lora subcommand #{subcommand.inspect}"
           err.puts LORA_USAGE
+          2
+        end
+      end
+
+      def run_export(argv, out:, err:)
+        format, *rest = argv
+
+        case format
+        when 'gguf' then ExportGGUF.run(rest, out: out, err: err)
+        when nil, 'help', '--help', '-h'
+          out.puts EXPORT_USAGE
+          0
+        else
+          err.puts "rpeft: unknown export format #{format.inspect}"
+          err.puts EXPORT_USAGE
           2
         end
       end

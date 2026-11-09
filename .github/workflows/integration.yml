@@ -37,16 +37,25 @@ jobs:
         run: |
           pip install torch --index-url https://download.pytorch.org/whl/cpu
           pip install transformers peft datasets accelerate
+      # The GGUF export test runs llama.cpp's converter, which is not published as a package. Its latest
+      # revision is used, like the latest Python packages, so the run also catches converter changes that
+      # break the export. The converter imports sentencepiece even for tokenizers that do not use it.
+      - name: Fetch llama.cpp for the GGUF export test
+        run: |
+          git clone --depth 1 https://github.com/ggml-org/llama.cpp "$RUNNER_TEMP/llama.cpp"
+          pip install sentencepiece
       # LD_LIBRARY_PATH is where PyCall looks for the shared libpython that
       # setup-python installs outside the system library paths.
       - name: Report the environment
         run: bundle exec exe/rpeft doctor
         env:
+          LLAMA_CPP_DIR: ${{ runner.temp }}/llama.cpp
           PYTHON: ${{ env.pythonLocation }}/bin/python
           LD_LIBRARY_PATH: ${{ env.pythonLocation }}/lib
       - name: Run the integration tests
         run: bundle exec rake test:integration
         env:
           RPEFT_INTEGRATION: "1"
+          LLAMA_CPP_DIR: ${{ runner.temp }}/llama.cpp
           PYTHON: ${{ env.pythonLocation }}/bin/python
           LD_LIBRARY_PATH: ${{ env.pythonLocation }}/lib

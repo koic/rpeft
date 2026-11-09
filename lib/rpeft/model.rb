@@ -38,6 +38,15 @@ module RPEFT
       self
     end
 
+    # Writes the model to a single GGUF file for llama.cpp, Ollama, and other local runtimes, and returns its path.
+    # chat_template: false leaves out the chat template, for a model fine-tuned on plain text.
+    # See GGUF for the quantize: types and how the llama.cpp tools are found.
+    def export_gguf(output, quantize: :q8_0, chat_template: true, llama_cpp: nil, llama_quantize: nil)
+      GGUF.export(
+        path, output, quantize: quantize, chat_template: chat_template, llama_cpp: llama_cpp, llama_quantize: llama_quantize
+      )
+    end
+
     # Generates a completion for the prompt. Decoding is greedy (and thus deterministic for a given model and prompt)
     # unless temperature or top_p turns sampling on.
     def generate(prompt, max_new_tokens: 64, device: :auto, temperature: nil, top_p: nil, seed: nil)
