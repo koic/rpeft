@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 (2026-11-10)
+
+Upgrading changes what instruction and chat datasets train on, so the same data and options give a different adapter than in 0.1.0 (see the first entry).
 
 - Instruction and chat datasets now train on the answers alone: the prompt is read as context but no longer counts toward the loss.
   `train_on_prompt: true` (`--train-on-prompt` in the CLI) restores training on every token. Text datasets are unchanged

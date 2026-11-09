@@ -256,7 +256,7 @@ RPEFT.check # => a Hash describing Python, packages, and devices
 
 ```console
 $ rpeft doctor
-Ruby:         4.0.6 (rpeft 0.1.0)
+Ruby:         4.0.6 (rpeft 0.2.0)
 Python:       3.12.13 (/path/to/.venv/bin/python)
 torch:        OK 2.13.0
 transformers: OK 5.15.0
