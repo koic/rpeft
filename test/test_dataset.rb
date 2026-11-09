@@ -50,7 +50,7 @@ class TestDataset < Minitest::Test
     dataset = RPEFT::Dataset.from_records([{instruction: 'Say hi', output: 'hi'}])
 
     assert_equal :instruction, dataset.format
-    assert_includes JSON.parse(File.readlines(dataset.path).first)['text'], '### Instruction:'
+    assert_includes JSON.parse(File.readlines(dataset.path).first)['prompt'], '### Instruction:'
   end
 
   def test_from_records_rejects_a_non_hash_record
@@ -97,7 +97,7 @@ class TestDataset < Minitest::Test
     assert_equal :text, RPEFT::Dataset.new(@file).format
   end
 
-  def test_renders_an_instruction_dataset_into_text_format
+  def test_renders_an_instruction_dataset_into_prompts_and_completions
     File.write(@file, <<~JSONL)
       {"instruction":"Say hi","output":"hi"}
       {"instruction":"Add numbers","input":"1 and 2","output":"3"}
@@ -111,8 +111,10 @@ class TestDataset < Minitest::Test
     records = File.readlines(dataset.path).map { |line| JSON.parse(line) }
 
     assert_equal 2, records.size
-    assert_equal "### Instruction:\nSay hi\n\n### Response:\nhi", records[0]['text']
-    assert_includes records[1]['text'], "### Input:\n1 and 2"
+    assert_equal "### Instruction:\nSay hi\n\n### Response:\n", records[0]['prompt']
+    assert_equal 'hi', records[0]['completion']
+    assert_equal "### Instruction:\nAdd numbers\n\n### Input:\n1 and 2\n\n### Response:\n", records[1]['prompt']
+    assert_equal '3', records[1]['completion']
   end
 
   def test_detects_the_messages_format_and_passes_the_file_through
@@ -125,9 +127,13 @@ class TestDataset < Minitest::Test
     assert_equal 'messages', dataset.backend_format
   end
 
-  def test_reports_text_as_the_backend_format_for_instruction_datasets
+  def test_reports_completion_as_the_backend_format_for_instruction_datasets
     File.write(@file, %({"instruction":"Say hi","output":"hi"}\n))
 
+    assert_equal 'completion', RPEFT::Dataset.new(@file).backend_format
+  end
+
+  def test_reports_text_as_the_backend_format_for_text_datasets
     assert_equal 'text', RPEFT::Dataset.new(@file).backend_format
   end
 

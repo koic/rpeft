@@ -343,8 +343,58 @@ class TestLoRATrain < RPEFTTest
     _name, config = @backend.calls.find { |call| call.first == :train_lora }
     first = JSON.parse(@backend.datasets[config['dataset_path']].first)
 
-    assert_includes first['text'], '### Instruction:'
-    assert_includes first['text'], '### Response:'
+    assert_equal 'completion', config['dataset_format']
+    assert_equal "### Instruction:\nSay hi\n\n### Response:\n", first['prompt']
+    assert_equal 'hi', first['completion']
+  end
+
+  def test_trains_on_the_answers_alone_by_default
+    adapter = train
+
+    _name, config = @backend.calls.find { |call| call.first == :train_lora }
+
+    refute config['train_on_prompt']
+    refute adapter.metadata.dig('training', 'train_on_prompt')
+  end
+
+  def test_trains_on_the_prompts_too_when_asked
+    adapter = train(train_on_prompt: true)
+
+    _name, config = @backend.calls.find { |call| call.first == :train_lora }
+
+    assert config['train_on_prompt']
+    assert adapter.metadata.dig('training', 'train_on_prompt')
+  end
+
+  def test_rejects_a_non_boolean_train_on_prompt
+    error = assert_raises(RPEFT::ConfigurationError) { train(train_on_prompt: 'yes') }
+
+    assert_match(/train_on_prompt/, error.message)
+    assert_empty @backend.calls
+  end
+
+  def test_records_the_examples_the_backend_skipped
+    response = FakeBackend.new.train_lora(
+      'output_dir' => 'x', 'base_model' => 'fake/model', 'device' => 'cpu'
+    ).merge('skipped_examples' => 3, 'eval_skipped_examples' => 1)
+    RPEFT.backend = FakeBackend.new(responses: {train_lora: response})
+
+    adapter = train(device: :cpu)
+
+    assert_equal 3, adapter.metadata.dig('training', 'skipped_examples')
+    assert_equal 1, adapter.metadata.dig('training', 'eval_skipped_examples')
+  end
+
+  def test_accepts_an_instruction_eval_dataset_for_a_text_dataset
+    eval_file = File.join(@workdir, 'eval.jsonl')
+    File.write(eval_file, %({"instruction":"Say bye","output":"bye"}\n))
+
+    train(eval_dataset: eval_file)
+
+    _name, config = @backend.calls.find { |call| call.first == :train_lora }
+
+    assert_equal 'text', config['dataset_format']
+    assert_equal 'completion', config['eval_dataset_format']
   end
 
   def test_removes_the_temporary_copy_of_in_memory_records_after_training

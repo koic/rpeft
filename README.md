@@ -179,21 +179,22 @@ The rule behind this also applies to choosing a dataset format: the prompt at in
 
 ### Training options
 
-| Option            | Default | Meaning                                                                                 |
-| ----------------- | ------- | --------------------------------------------------------------------------------------- |
-| `rank:`           | `8`     | LoRA rank $r$, the rank of the low-rank update $BA$                                     |
-| `alpha:`          | `16`    | LoRA scaling factor $\alpha$ (`lora_alpha` in PEFT)                                     |
-| `dropout:`        | `0.05`  | LoRA dropout (`lora_dropout` in PEFT)                                                   |
-| `target_modules:` | `nil`   | Modules to adapt, e.g. `%w(q_proj v_proj)`. `nil` uses PEFT's per-architecture defaults |
-| `epochs:`         | `3`     | Training epochs                                                                         |
-| `batch_size:`     | `4`     | Per-device batch size                                                                   |
-| `learning_rate:`  | `2e-4`  | Learning rate                                                                           |
-| `max_length:`     | `512`   | Max token length per example                                                            |
-| `eval_dataset:`   | `nil`   | Held-out dataset, in the same format as `dataset:`. Enables per-epoch evaluation        |
-| `checkpoints:`    | `false` | Checkpoint every epoch so an interrupted run can resume; removed once training ends     |
-| `resume:`         | `false` | Resume from the last checkpoint in `output_dir`, which must be given explicitly         |
-| `output_dir:`     | `nil`   | Adapter output directory: new, empty, or an earlier output. `nil` uses a temporary one  |
-| `device:`         | `:auto` | `:auto`, `:cuda`, `:mps`, or `:cpu`                                                     |
+| Option             | Default | Meaning                                                                                 |
+| ------------------ | ------- | --------------------------------------------------------------------------------------- |
+| `rank:`            | `8`     | LoRA rank $r$, the rank of the low-rank update $BA$                                     |
+| `alpha:`           | `16`    | LoRA scaling factor $\alpha$ (`lora_alpha` in PEFT)                                     |
+| `dropout:`         | `0.05`  | LoRA dropout (`lora_dropout` in PEFT)                                                   |
+| `target_modules:`  | `nil`   | Modules to adapt, e.g. `%w(q_proj v_proj)`. `nil` uses PEFT's per-architecture defaults |
+| `epochs:`          | `3`     | Training epochs                                                                         |
+| `batch_size:`      | `4`     | Per-device batch size                                                                   |
+| `learning_rate:`   | `2e-4`  | Learning rate                                                                           |
+| `max_length:`      | `512`   | Max token length per example                                                            |
+| `train_on_prompt:` | `false` | Compute the loss on prompts too, not only on answers (instruction and chat formats)     |
+| `eval_dataset:`    | `nil`   | Held-out dataset, in the same format as `dataset:`. Enables per-epoch evaluation        |
+| `checkpoints:`     | `false` | Checkpoint every epoch so an interrupted run can resume; removed once training ends     |
+| `resume:`          | `false` | Resume from the last checkpoint in `output_dir`, which must be given explicitly         |
+| `output_dir:`      | `nil`   | Adapter output directory: new, empty, or an earlier output. `nil` uses a temporary one  |
+| `device:`          | `:auto` | `:auto`, `:cuda`, `:mps`, or `:cpu`                                                     |
 
 ### Dataset
 
@@ -217,6 +218,10 @@ the ones every chat template understands:
 ```json
 {"messages":[{"role":"user","content":"How do I reverse an array?"},{"role":"assistant","content":"[1, 2, 3].reverse"}]}
 ```
+
+In instruction and chat data, the prompt is read as context, but the loss is computed on the answers alone: the `output`, or every assistant turn after the first message with its end-of-turn marker.
+A `text` line has no such boundary, so it is trained on as a whole. Pass `train_on_prompt: true` to compute the loss on every token instead.
+Examples whose answer does not fit within `max_length:` are skipped with a warning, and the number skipped is recorded in the adapter metadata.
 
 `dataset:` also accepts any Enumerable of record Hashes in the same three shapes, so data built in Ruby needs no file of its own:
 

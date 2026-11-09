@@ -21,22 +21,11 @@ def train_lora(config):
             device=device,
             trust_remote_code=config.get("trust_remote_code", False),
         )
-        dataset = _data.load_tokenized_dataset(
-            config["dataset_path"],
-            tokenizer,
-            text_field=config.get("text_field", "text"),
-            max_length=config.get("max_length", 512),
-            dataset_format=config.get("dataset_format", "text"),
-        )
+        dataset, skipped = _load_dataset(config, tokenizer, "dataset")
         eval_dataset = None
+        eval_skipped = None
         if config.get("eval_dataset_path"):
-            eval_dataset = _data.load_tokenized_dataset(
-                config["eval_dataset_path"],
-                tokenizer,
-                text_field=config.get("text_field", "text"),
-                max_length=config.get("max_length", 512),
-                dataset_format=config.get("dataset_format", "text"),
-            )
+            eval_dataset, eval_skipped = _load_dataset(config, tokenizer, "eval_dataset")
 
         with stage("training"):
             model, target_modules, param_counts = _apply_lora(model, lora)
@@ -54,12 +43,24 @@ def train_lora(config):
             shutil.rmtree(_trainer_dir(output_dir), ignore_errors=True)
 
         return _result(
-            config, device, dtype, target_modules, param_counts, metrics, steps, len(dataset)
+            config, device, dtype, target_modules, param_counts, metrics, steps, len(dataset), skipped, eval_skipped
         )
     finally:
         model = None
         gc.collect()
         _device.empty_cache(device)
+
+
+def _load_dataset(config, tokenizer, name):
+    return _data.load_tokenized_dataset(
+        config[name + "_path"],
+        tokenizer,
+        text_field=config.get("text_field", "text"),
+        max_length=config.get("max_length", 512),
+        dataset_format=config.get(name + "_format") or config.get("dataset_format", "text"),
+        train_on_prompt=bool(config.get("train_on_prompt", False)),
+        name=name,
+    )
 
 
 def _apply_lora(model, lora):
@@ -117,7 +118,7 @@ def _build_trainer(model, tokenizer, dataset, eval_dataset, config, device, dtyp
     )
 
 
-def _result(config, device, dtype, target_modules, param_counts, metrics, steps, num_examples):
+def _result(config, device, dtype, target_modules, param_counts, metrics, steps, num_examples, skipped, eval_skipped):
     trainable_params, total_params = param_counts
     effective = dict(config)
     effective["device"] = device
@@ -133,6 +134,8 @@ def _result(config, device, dtype, target_modules, param_counts, metrics, steps,
         "final_loss": float(metrics.get("train_loss", 0.0)),
         "eval_loss": float(metrics["eval_loss"]) if "eval_loss" in metrics else None,
         "num_examples": int(num_examples),
+        "skipped_examples": int(skipped),
+        "eval_skipped_examples": int(eval_skipped) if eval_skipped is not None else None,
         "steps": int(steps),
         "trainable_params": int(trainable_params),
         "total_params": int(total_params),
@@ -156,15 +159,23 @@ def _resume_point(config):
 
 
 def _collator(tokenizer):
-    # DataCollatorForLanguageModeling ignores every position holding the pad token. Tokenizers without
-    # a pad token of their own pad with EOS (see _models.load_tokenizer), and many that have one reuse
-    # EOS too, so the EOS that ends each example would never be learned. Only the padding the batch
-    # added is ignored here, found through the attention mask instead of the token id.
+    # Labels come with each example rather than from the pad token id, as DataCollatorForLanguageModeling
+    # derives them. Tokenizers without a pad token of their own pad with EOS (see _models.load_tokenizer),
+    # and many that have one reuse EOS too, so the EOS that ends each example would never be learned.
     def collate(features):
-        batch = tokenizer.pad(features, return_tensors="pt")
-        labels = batch["input_ids"].clone()
-        labels[batch["attention_mask"] == 0] = -100
-        batch["labels"] = labels
+        import torch
+
+        labels = [list(feature["labels"]) for feature in features]
+        batch = tokenizer.pad(
+            [{key: value for key, value in feature.items() if key != "labels"} for feature in features],
+            return_tensors="pt",
+        )
+        width = batch["input_ids"].shape[1]
+        padded = []
+        for example in labels:
+            padding = [_data.IGNORED] * (width - len(example))
+            padded.append(padding + example if tokenizer.padding_side == "left" else example + padding)
+        batch["labels"] = torch.tensor(padded, dtype=torch.long)
         return batch
 
     return collate

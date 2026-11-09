@@ -18,7 +18,7 @@ module RPEFT
     POSITIVE_NUMBER_OPTIONS = %i(alpha learning_rate).freeze
 
     class << self
-      def train(model:, dataset:, eval_dataset: nil, rank: 8, alpha: 16, dropout: 0.05, target_modules: nil, epochs: 3, batch_size: 4, learning_rate: 2e-4, max_length: 512, output_dir: nil, device: :auto, checkpoints: false, resume: false)
+      def train(model:, dataset:, eval_dataset: nil, rank: 8, alpha: 16, dropout: 0.05, target_modules: nil, epochs: 3, batch_size: 4, learning_rate: 2e-4, max_length: 512, train_on_prompt: false, output_dir: nil, device: :auto, checkpoints: false, resume: false)
         options = {
           rank: rank,
           alpha: alpha,
@@ -28,6 +28,7 @@ module RPEFT
           batch_size: batch_size,
           learning_rate: learning_rate,
           max_length: max_length,
+          train_on_prompt: train_on_prompt,
           checkpoints: checkpoints,
           resume: resume
         }
@@ -81,6 +82,13 @@ module RPEFT
         end
         validate_dropout(options[:dropout])
         validate_target_modules(options[:target_modules])
+        validate_train_on_prompt(options[:train_on_prompt])
+      end
+
+      def validate_train_on_prompt(train_on_prompt)
+        return if [true, false].include?(train_on_prompt)
+
+        raise ConfigurationError, "train_on_prompt must be true or false, got #{train_on_prompt.inspect}"
       end
 
       def validate_dropout(dropout)
@@ -103,12 +111,13 @@ module RPEFT
         raise ConfigurationError, 'resume: true requires an explicit output_dir: to find the previous checkpoints'
       end
 
-      # The backend tokenizes both datasets the same way, so mixing formats would silently mis-render the evaluation set.
+      # A chat transcript is rendered with the chat template and plain text is not, so a loss measured on one
+      # says little about a model trained on the other.
       def coerce_eval_dataset(eval_dataset, training_dataset)
         return nil unless eval_dataset
 
         dataset = Dataset.coerce(eval_dataset)
-        return dataset if dataset.backend_format == training_dataset.backend_format
+        return dataset if dataset.messages? == training_dataset.messages?
 
         # Raised before train assigns the dataset, so its ensure clause cannot discard it.
         dataset.discard unless dataset.equal?(eval_dataset)
@@ -134,6 +143,7 @@ module RPEFT
           'epochs' => options[:epochs],
           'batch_size' => options[:batch_size],
           'learning_rate' => options[:learning_rate],
+          'train_on_prompt' => options[:train_on_prompt],
           'logging_steps' => 5,
           'seed' => 42,
           'trust_remote_code' => false,
@@ -146,7 +156,10 @@ module RPEFT
             'target_modules' => options[:target_modules]
           }
         }
-        payload['eval_dataset_path'] = options[:eval_dataset].path if options[:eval_dataset]
+        if options[:eval_dataset]
+          payload['eval_dataset_path'] = options[:eval_dataset].path
+          payload['eval_dataset_format'] = options[:eval_dataset].backend_format
+        end
 
         payload
       end
@@ -193,6 +206,9 @@ module RPEFT
             'batch_size' => options[:batch_size],
             'learning_rate' => options[:learning_rate],
             'max_length' => options[:max_length],
+            'train_on_prompt' => options[:train_on_prompt],
+            'skipped_examples' => result['skipped_examples'],
+            'eval_skipped_examples' => result['eval_skipped_examples'],
             'device' => result['device'] || device.to_s,
             'train_loss' => result['final_loss'],
             'eval_loss' => result['eval_loss'],

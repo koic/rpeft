@@ -4,8 +4,9 @@ module RPEFT
   module CLI
     # @api private
     class LoRATrain < Command
-      PASSTHROUGH_OPTIONS = %i(rank alpha dropout target_modules epochs batch_size
-                               learning_rate max_length device).freeze
+      PASSTHROUGH_OPTIONS = %i(
+        rank alpha dropout target_modules epochs batch_size learning_rate max_length train_on_prompt device
+      ).freeze
       REQUIRED_OPTIONS = %i(model dataset output).freeze
       DEVICES = %w(auto cuda mps cpu).freeze
 
@@ -47,6 +48,9 @@ module RPEFT
           end
           o.on('--max-length N', Integer, 'Max token length (default: 512)') do |v|
             options[:max_length] = v
+          end
+          o.on('--train-on-prompt', 'Also train on the prompt of instruction and chat examples') do
+            options[:train_on_prompt] = true
           end
           o.on('--device DEVICE', DEVICES,
                'auto, cuda, mps, or cpu (default: auto)') { |v| options[:device] = v.to_sym }

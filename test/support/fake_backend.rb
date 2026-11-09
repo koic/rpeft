@@ -49,6 +49,8 @@ class FakeBackend
         'final_loss' => 2.5,
         'eval_loss' => config['eval_dataset_path'] ? 2.75 : nil,
         'num_examples' => 4,
+        'skipped_examples' => 0,
+        'eval_skipped_examples' => config['eval_dataset_path'] ? 0 : nil,
         'steps' => 4,
         'trainable_params' => 8192,
         'total_params' => 100_000,

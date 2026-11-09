@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Instruction and chat datasets now train on the answers alone: the prompt is read as context but no longer counts toward the loss.
+  `train_on_prompt: true` (`--train-on-prompt` in the CLI) restores training on every token. Text datasets are unchanged
+- An assistant turn opening a chat transcript, such as a greeting, answers nothing and is now read as context rather than trained on
+- Examples whose answer does not fit within `max_length:` are skipped with a warning and counted in the adapter metadata (`skipped_examples` and `eval_skipped_examples`)
+
 ## 0.1.0 (2026-11-04)
 
 The first release. It brings LoRA fine-tuning of large language models to Ruby, from training an adapter

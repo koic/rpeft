@@ -10,9 +10,11 @@ module RPEFT
   #
   # Three JSONL line formats are accepted and detected from the first line: `{"text": ...}` is
   # passed through as is, `{"instruction": ..., "input": ..., "output": ...}` is rendered into
-  # a text prompt, and `{"messages": [{"role": ..., "content": ...}, ...]}` is passed through
+  # a prompt and its completion, and `{"messages": [{"role": ..., "content": ...}, ...]}` is passed through
   # for the backend to render with the tokenizer's chat template.
   class Dataset
+    BACKEND_FORMATS = {text: 'text', instruction: 'completion', messages: 'messages'}.freeze
+
     def self.coerce(value)
       return value if value.is_a?(Dataset)
       return from_records(value) if value.is_a?(Enumerable)
@@ -63,10 +65,14 @@ module RPEFT
       @temporary_dirs.clear
     end
 
-    # The format the backend sees. Instruction datasets are normalized to text here,
-    # so only text and messages ever cross the boundary.
+    # The format the backend sees. Instruction datasets are normalized to prompt and completion pairs here,
+    # which keeps the boundary the backend needs to train on the completion alone.
     def backend_format
-      format == :messages ? 'messages' : 'text'
+      BACKEND_FORMATS.fetch(format)
+    end
+
+    def messages?
+      format == :messages
     end
 
     private
@@ -112,8 +118,8 @@ module RPEFT
       raise DatasetError, "dataset is not JSONL (#{e.message}): #{path}"
     end
 
-    # Rewrites a non-text dataset into text-format JSONL in
-    # a temporary directory, so the backend only ever sees one format.
+    # Rewrites an instruction dataset into prompt and completion JSONL in a temporary directory,
+    # so the backend needs no knowledge of the instruction template.
     def normalize(source_path)
       dir = Dir.mktmpdir('rpeft-dataset-')
       @temporary_dirs << dir
@@ -124,7 +130,9 @@ module RPEFT
           next if line.strip.empty?
 
           record = parse_line(line, source_path)
-          out.puts JSON.generate('text' => render_instruction(record, lineno, source_path))
+          prompt, completion = render_instruction(record, lineno, source_path)
+
+          out.puts JSON.generate('prompt' => prompt, 'completion' => completion)
         end
       end
 
@@ -142,10 +150,11 @@ module RPEFT
       end
 
       input = record['input']
-      text = "### Instruction:\n#{instruction}\n"
-      text << "\n### Input:\n#{input}\n" if input && !input.to_s.empty?
-      text << "\n### Response:\n#{output}"
-      text
+      prompt = "### Instruction:\n#{instruction}\n"
+      prompt << "\n### Input:\n#{input}\n" if input && !input.to_s.empty?
+      prompt << "\n### Response:\n"
+
+      [prompt, output]
     end
   end
 end

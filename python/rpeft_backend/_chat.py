@@ -22,6 +22,40 @@ def render(tokenizer, messages, add_generation_prompt=False):
     return rendered
 
 
+def segments(tokenizer, messages):
+    """Splits a rendered transcript into (text, trainable) pairs, trainable for the assistant's turns.
+
+    Each assistant turn is located by rendering the transcript up to its generation prompt and up to the
+    end of the turn: the difference is what the model writes at inference, the turn's end marker included.
+    """
+    rendered = render(tokenizer, messages)
+    pairs = []
+    position = 0
+    for index, message in enumerate(messages):
+        # A turn opening the transcript answers nothing, such as a greeting, so it is read as context.
+        # Locating it would also mean rendering an empty transcript, which chat templates refuse.
+        if index == 0 or message.get("role") != "assistant":
+            continue
+
+        start = render(tokenizer, messages[:index], add_generation_prompt=True)
+        through = render(tokenizer, messages[: index + 1])
+        # Some templates render earlier turns differently once the conversation goes on, such as dropping
+        # reasoning from past replies. The turn then cannot be located, and guessing would train on the wrong text.
+        if not (rendered.startswith(through) and through.startswith(start) and len(start) >= position):
+            raise ValueError(
+                "the chat template renders earlier turns differently as the conversation goes on, so the "
+                "assistant's replies cannot be located; pass train_on_prompt: true (--train-on-prompt in the CLI) "
+                "to train on the whole transcript"
+            )
+
+        pairs.append((rendered[position : len(start)], False))
+        pairs.append((rendered[len(start) : len(through)], True))
+        position = len(through)
+
+    pairs.append((rendered[position:], False))
+    return [(text, trainable) for text, trainable in pairs if text]
+
+
 def writes_special_tokens(tokenizer):
     """Whether render's output already holds the special tokens, BOS included, that the model expects.
 

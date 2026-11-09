@@ -59,6 +59,17 @@ class TestCLILoRATrain < RPEFTTest
     assert_equal %w(q_proj v_proj), config.dig('lora', 'target_modules')
     assert_equal 1, config['epochs']
     assert_equal 'cpu', config['device']
+    refute config['train_on_prompt']
+  end
+
+  def test_train_on_prompt_flag_trains_on_the_prompts_too
+    status, = run_cli(['lora', 'train', '--model', 'fake/model', '--dataset', @dataset,
+                       '--output', File.join(@workdir, 'adapter'), '--device', 'cpu', '--train-on-prompt'])
+
+    assert_equal 0, status
+
+    _name, config = @backend.calls.find { |call| call.first == :train_lora }
+    assert config['train_on_prompt']
   end
 
   def test_reports_backend_errors_with_exit_status_one
