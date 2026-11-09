@@ -18,7 +18,7 @@ It is an independent project, not affiliated with Hugging Face.
 
 ## The model behind the API
 
-LoRA keeps the base model weights $W_0$ frozen and learns a low-rank update of rank $r$, scaled by $\alpha / r$:
+[LoRA](https://arxiv.org/abs/2106.09685) keeps the base model weights $W_0$ frozen and learns a low-rank update of rank $r$, scaled by $\alpha / r$:
 
 ```math
 \begin{aligned}
