@@ -7,6 +7,13 @@ class TestRPEFT < RPEFTTest
     refute_nil ::RPEFT::VERSION
   end
 
+  # Read from the file rather than imported, so the check needs no Python.
+  def test_the_python_backend_has_the_same_version
+    init = File.read(File.expand_path('../python/rpeft_backend/__init__.py', __dir__))
+
+    assert_equal RPEFT::VERSION, init[/^__version__ = "(.+)"$/, 1]
+  end
+
   def test_device_returns_the_detected_device_as_a_symbol
     assert_equal :cpu, RPEFT.device
     assert_equal :detect_device, @backend.calls.first.first
