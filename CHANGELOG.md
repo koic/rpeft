@@ -1,6 +1,9 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 (2026-11-15)
+
+A fine-tuned model can now leave RPEFT: exported to GGUF, it runs in Ollama, llama.cpp, and other local runtimes, with no Python where it is used.
+Existing code behaves as it did in 0.2.0.
 
 - GGUF export of a merged model (`RPEFT::Model#export_gguf`, `rpeft export gguf`) through llama.cpp's own tools,
   with Q8_0 by default and the K-quant types through `llama-quantize`. `chat_template: false` (`--no-chat-template`) leaves out
