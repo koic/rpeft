@@ -212,6 +212,13 @@ Lines with `instruction`/`output` keys (and an optional `input`) are also accept
 {"instruction":"Explain what Array#map does","output":"It returns a new array with the block applied to each element."}
 ```
 
+The prompt is the instruction under a `### Instruction:` heading, the input, if any, under `### Input:`, and a `### Response:` heading that the output follows.
+A model trained this way expects the same prompt at inference, up to and including the line break after `### Response:`:
+
+```ruby
+adapter.generate("### Instruction:\nExplain what Array#map does\n\n### Response:\n")
+```
+
 Chat transcripts are accepted as a `messages` array. These are rendered with the tokenizer's own chat template,
 so the conversation is formatted the way the model expects. Roles are limited to `system`, `user`, and `assistant`,
 the ones every chat template understands:
@@ -229,7 +236,9 @@ Examples whose answer does not fit within `max_length:` are skipped with a warni
 ```ruby
 RPEFT::LoRA.train(
   model: 'Qwen/Qwen2.5-Coder-0.5B',
-  dataset: Article.published.map { |article| {text: article.body} }
+  dataset: CodingExample.where(language: 'Ruby').map { |example|
+    {instruction: example.prompt, output: example.completion}
+  }
 )
 ```
 
