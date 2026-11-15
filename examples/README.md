@@ -40,11 +40,39 @@ The fine-tuned model answers with a bare Ruby snippet and its result, the shape 
 
 Training reports `trainable params: 540,672 || all params: 494,573,440 || trainable%: 0.1093` along the way: only about 0.11% of the parameters are updated.
 
+## Running the model in Ollama
+
+The merged model can go on to run in [Ollama](https://ollama.com), with no Python involved. This step is optional and needs a llama.cpp checkout,
+as described in [Exporting to GGUF](../README.md#exporting-to-gguf). Export the model to a GGUF file:
+
+```console
+$ bundle exec rpeft export gguf \
+    --model examples/ruby-model \
+    --output examples/ruby-model.gguf \
+    --no-chat-template \
+    --llama-cpp ~/src/llama.cpp
+GGUF saved to /path/to/examples/ruby-model.gguf
+```
+
+`ruby_answers.jsonl` is plain text, so the model expects its prompt as it was in training. `--no-chat-template` keeps Ollama from wrapping the prompt in the base model's chat template,
+and `Modelfile` passes the prompt through as is. Register the file with Ollama and ask the same question:
+
+```console
+$ ollama create ruby-model -f examples/Modelfile
+$ ollama run ruby-model $'User: How do I find the minimum value in an array?\nAssistant:'
+ [1, 2, 3].min
+# => 1
+```
+
+Ollama samples by default, so the array in the answer varies from run to run, while its shape stays the one the model learned.
+
 ## Files
 
 - `train_and_merge.rb` is the script above.
 - `ruby_answers.jsonl` holds 40 programming questions, each answered with Ruby code only. Why its effect is easy to see is explained in the [Dataset section](../README.md#dataset).
 - `ruby-lora/` is the trained adapter: its weights in `adapter_model.safetensors`, about 2 MB, plus its configuration and metadata.
 - `ruby-model/` is the merged model, about 1 GB, which runs without the adapter.
+- `Modelfile` tells Ollama to load `ruby-model.gguf` and to pass prompts through unchanged.
+- `ruby-model.gguf` is the exported model, about 530 MB at the default Q8_0.
 
-`ruby-lora/` and `ruby-model/` are created by the script and ignored by git.
+`ruby-lora/` and `ruby-model/` are created by the script, `ruby-model.gguf` by the export, and all three are ignored by git.

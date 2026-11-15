@@ -11,5 +11,6 @@
 /.venv/
 /examples/ruby-lora/
 /examples/ruby-model/
+/examples/ruby-model.gguf
 *.gem
 __pycache__/
