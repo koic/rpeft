@@ -385,6 +385,63 @@ class TestLoRATrain < RPEFTTest
     assert_equal 1, adapter.metadata.dig('training', 'eval_skipped_examples')
   end
 
+  def test_yields_the_progress_of_each_logged_step
+    seen = []
+
+    train do |progress|
+      seen << progress
+    end
+
+    assert_equal [2, 4, 4], seen.map(&:step)
+    assert_equal [4, 4, 4], seen.map(&:total_steps)
+    assert_in_delta 0.5, seen.first.epoch
+    assert_in_delta 3.0, seen.first.loss
+    assert_in_delta 0.0002, seen.first.learning_rate
+    assert_nil seen.first.eval_loss
+    assert_in_delta 2.75, seen.last.eval_loss
+    assert_nil seen.last.loss
+    assert_predicate seen.first, :frozen?
+  end
+
+  def test_records_the_history_with_or_without_a_block
+    without_block = train
+    with_block = train(output_dir: File.join(@workdir, 'other')) { |_progress| nil }
+
+    assert_equal FakeBackend::HISTORY, without_block.metadata.dig('training', 'history')
+    assert_equal FakeBackend::HISTORY, with_block.metadata.dig('training', 'history')
+  end
+
+  def test_raises_what_the_block_raised_and_stops_the_run
+    calls = 0
+
+    error = assert_raises(ArgumentError) {
+      train do |_progress|
+        calls += 1
+        raise ArgumentError, 'from the block'
+      end
+    }
+
+    assert_equal 'from the block', error.message
+    assert_equal 1, calls
+    refute_path_exists File.join(@workdir, 'adapter', 'rpeft_metadata.json')
+  end
+
+  def test_an_interrupt_in_the_block_ends_the_run
+    assert_raises(Interrupt) do
+      train { |_progress| raise Interrupt }
+    end
+  end
+
+  def test_a_failing_backend_still_raises_its_own_error_when_a_block_is_given
+    RPEFT.backend = FakeBackend.new(error: RPEFT::TrainingError.new('boom'))
+
+    error = assert_raises(RPEFT::TrainingError) {
+      train(device: :cpu) { |_progress| nil }
+    }
+
+    assert_equal 'boom', error.message
+  end
+
   def test_accepts_an_instruction_eval_dataset_for_a_text_dataset
     eval_file = File.join(@workdir, 'eval.jsonl')
     File.write(eval_file, %({"instruction":"Say bye","output":"bye"}\n))
@@ -470,9 +527,9 @@ class TestLoRATrain < RPEFTTest
 
   private
 
-  def train(**options)
+  def train(**options, &block)
     RPEFT::LoRA.train(
-      model: 'fake/model', dataset: @dataset, output_dir: File.join(@workdir, 'adapter'), **options
+      model: 'fake/model', dataset: @dataset, output_dir: File.join(@workdir, 'adapter'), **options, &block
     )
   end
 end

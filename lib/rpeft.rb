@@ -12,6 +12,7 @@ require_relative 'rpeft/model'
 require_relative 'rpeft/gguf'
 require_relative 'rpeft/lora'
 require_relative 'rpeft/lora/adapter'
+require_relative 'rpeft/lora/progress'
 require_relative 'rpeft/backend'
 require_relative 'rpeft/diagnosis'
 

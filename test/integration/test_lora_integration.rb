@@ -90,6 +90,42 @@ class TestLoRAIntegration < Minitest::Test
     assert_kind_of Numeric, adapter.metadata.dig('training', 'eval_loss')
   end
 
+  def test_lora_train_yields_its_progress_and_records_it_as_history
+    seen = []
+
+    adapter = RPEFT::LoRA.train(
+      model: TINY_MODEL, dataset: @dataset, eval_dataset: @dataset, output_dir: File.join(@workdir, 'adapter'),
+      rank: 2, epochs: 5, batch_size: 2, max_length: 64, device: :cpu
+    ) { |progress| seen << progress }
+    history = adapter.metadata.dig('training', 'history')
+
+    # Four examples in batches of two make 10 steps, logged every 5, and each of the 5 epochs ends with an evaluation.
+    assert_equal [5, 10], seen.select(&:loss).map(&:step)
+    assert_equal 5, seen.count(&:eval_loss)
+    assert(seen.all? { |progress| progress.total_steps == 10 })
+    assert_equal(seen.map(&:step), history.map { |entry| entry['step'] })
+    assert_equal(seen.map(&:eval_loss), history.map { |entry| entry['eval_loss'] })
+    assert_in_delta adapter.metadata.dig('training', 'eval_loss'), history.last['eval_loss']
+  end
+
+  def test_lora_train_stops_and_raises_what_the_progress_block_raised
+    output = File.join(@workdir, 'adapter')
+    calls = 0
+
+    error = assert_raises(ArgumentError) {
+      RPEFT::LoRA.train(
+        model: TINY_MODEL, dataset: @dataset, output_dir: output, rank: 2, epochs: 50, batch_size: 2, max_length: 64, device: :cpu
+      ) do |_progress|
+        calls += 1
+        raise ArgumentError, 'from the block'
+      end
+    }
+
+    assert_equal 'from the block', error.message
+    assert_equal 1, calls
+    refute_path_exists File.join(output, 'adapter_model.safetensors')
+  end
+
   def test_lora_train_accepts_a_messages_dataset
     dataset = File.join(@workdir, 'chat.jsonl')
     File.write(dataset, [

@@ -3,10 +3,14 @@ import os
 import shutil
 
 from . import _data, _device, _models
-from ._errors import stage
+from ._errors import BackendError, stage
+
+# What on_progress returns to end the run early.
+STOP = "stop"
+HISTORY_KEYS = ("loss", "eval_loss", "learning_rate")
 
 
-def train_lora(config):
+def train_lora(config, on_progress=None):
     lora = config.get("lora", {})
     resolved = _device.resolve_device(config.get("device"))
     device = resolved["device"]
@@ -30,9 +34,19 @@ def train_lora(config):
         with stage("training"):
             model, target_modules, param_counts = _apply_lora(model, lora)
             trainer = _build_trainer(model, tokenizer, dataset, eval_dataset, config, device, dtype)
+            progress = _progress_callback(on_progress) if on_progress is not None else None
+            if progress is not None:
+                trainer.add_callback(progress)
             resume = _resume_point(config)
             metrics = trainer.train(resume_from_checkpoint=resume).metrics
+            if progress is not None and progress.stopped:
+                # Nothing is saved: an adapter cut short is not the one that was asked for.
+                raise BackendError("training", "training was stopped by the progress callback")
             steps = trainer.state.global_step
+            # Taken before the evaluation below, which would log the last epoch's eval_loss a second time.
+            history = _history(trainer.state.log_history)
+            if progress is not None:
+                trainer.remove_callback(progress)
             if eval_dataset is not None:
                 metrics = dict(metrics, **trainer.evaluate())
 
@@ -42,13 +56,53 @@ def train_lora(config):
             # just travel with it wherever the adapter directory is saved or shared.
             shutil.rmtree(_trainer_dir(output_dir), ignore_errors=True)
 
-        return _result(
+        result = _result(
             config, device, dtype, target_modules, param_counts, metrics, steps, len(dataset), skipped, eval_skipped
         )
+        result["history"] = history
+        return result
     finally:
         model = None
         gc.collect()
         _device.empty_cache(device)
+
+
+def _progress_callback(on_progress):
+    import json
+
+    from transformers import TrainerCallback
+
+    from . import _finite
+
+    class Progress(TrainerCallback):
+        stopped = False
+
+        def on_log(self, args, state, control, logs=None, **kwargs):
+            entry = _history_entry(dict(logs or {}, step=state.global_step))
+            if entry is None:
+                return
+
+            entry["total_steps"] = state.max_steps
+            # Only a JSON string crosses to the caller, as everywhere else at this boundary.
+            if on_progress(json.dumps(_finite(entry), allow_nan=False)) == STOP:
+                self.stopped = True
+                control.should_training_stop = True
+
+    return Progress()
+
+
+def _history(log_history):
+    entries = (_history_entry(log) for log in log_history)
+    return [entry for entry in entries if entry is not None]
+
+
+def _history_entry(log):
+    # The Trainer also logs a summary of the whole run, which holds neither a loss of a step nor an eval_loss.
+    values = {key: log[key] for key in HISTORY_KEYS if key in log}
+    if "loss" not in values and "eval_loss" not in values:
+        return None
+
+    return dict({"step": log.get("step"), "epoch": log.get("epoch")}, **values)
 
 
 def _load_dataset(config, tokenizer, name):

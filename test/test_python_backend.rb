@@ -13,12 +13,105 @@ class TestPythonBackend < Minitest::Test
     end
   end
 
+  # Stands in for the Python side of train_lora: it calls the progress callback as Python would, where
+  # an exception raised by Ruby is lost, and gives up the run when the callback answers "stop".
+  class TrainingBackend < RPEFT::Backend::Python
+    attr_reader :answers
+
+    private
+
+    def call(_name, _config, callback = nil, default_error:)
+      @answers = Array.new(3) { |step|
+        begin
+          callback&.call(%({"step": #{step}}))
+        rescue Exception # rubocop:disable Lint/RescueException
+          nil
+        end
+      }
+      raise default_error, 'training was stopped by the progress callback' if @answers.include?('stop')
+
+      {'steps' => 3}
+    end
+  end
+
   def setup
     @workdir = Dir.mktmpdir('rpeft_test')
   end
 
   def teardown
     FileUtils.remove_entry(@workdir)
+  end
+
+  def test_train_lora_yields_each_progress_entry_as_a_hash
+    backend = TrainingBackend.new
+    seen = []
+
+    result = backend.train_lora({}) { |entry| seen << entry }
+
+    assert_equal [{'step' => 0}, {'step' => 1}, {'step' => 2}], seen
+    assert_equal({'steps' => 3}, result)
+    assert_equal [nil, nil, nil], backend.answers
+  end
+
+  def test_train_lora_stops_the_run_and_raises_what_the_block_raised
+    backend = TrainingBackend.new
+    calls = 0
+
+    error = assert_raises(ArgumentError) {
+      backend.train_lora({}) do |_entry|
+        calls += 1
+        raise ArgumentError, 'from the block'
+      end
+    }
+
+    assert_equal 'from the block', error.message
+    assert_equal 1, calls
+    assert_equal %w(stop stop stop), backend.answers
+  end
+
+  def test_train_lora_stops_the_run_on_an_interrupt
+    backend = TrainingBackend.new
+
+    assert_raises(Interrupt) do
+      backend.train_lora({}) { |_entry| raise Interrupt }
+    end
+    assert_includes backend.answers, 'stop'
+  end
+
+  def test_train_lora_stops_the_run_when_the_block_is_left_with_break
+    backend = TrainingBackend.new
+    calls = 0
+
+    error = assert_raises(RPEFT::TrainingError) {
+      backend.train_lora({}) do |_entry|
+        calls += 1
+        break
+      end
+    }
+
+    assert_match(/break or throw/, error.message)
+    assert_equal 1, calls
+    assert_equal %w(stop stop stop), backend.answers
+  end
+
+  def test_train_lora_stops_the_run_when_the_block_is_left_with_throw
+    backend = TrainingBackend.new
+
+    error = assert_raises(RPEFT::TrainingError) {
+      catch(:done) do
+        backend.train_lora({}) { |_entry| throw :done }
+      end
+    }
+
+    assert_match(/break or throw/, error.message)
+    assert_equal %w(stop stop stop), backend.answers
+  end
+
+  def test_train_lora_without_a_block_passes_no_callback
+    backend = TrainingBackend.new
+
+    assert_equal({'steps' => 3}, backend.train_lora({}))
+    assert_equal [nil, nil, nil], backend.answers
   end
 
   def test_venv_site_packages_finds_the_site_packages_directory

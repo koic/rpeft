@@ -15,6 +15,7 @@ It is an independent project, not affiliated with Hugging Face.
 - GGUF export of a merged model for llama.cpp, Ollama, and other local runtimes
 - Apple Silicon (MPS) as a first-class target, with CUDA and CPU auto-detected
 - Validation loss, per-epoch checkpoints, and resuming
+- Training progress through a block, and its history in the adapter metadata
 - A CLI for training, merging, and generation, and `rpeft doctor` to check the Python environment
 
 ## The model behind the API
@@ -118,6 +119,28 @@ adapter.metadata.dig('training', 'eval_loss')  # => 0.91
 `RPEFT::LoRA.train` returns a `RPEFT::LoRA::Adapter` that knows its `path`, `base_model`, `rank`, `alpha`, `dropout`, `target_modules`, and training `metadata`.
 `adapter.merge` returns a `RPEFT::Model` with `path` and `base_model`. `save` moves the artifact to the given path; a destination produced by a previous `save` is replaced,
 so scripts can be re-run, while any other existing path is refused.
+
+### Progress
+
+A block given to `RPEFT::LoRA.train` is called as the run goes, with a `RPEFT::LoRA::Progress` for every logged training step (every 5 steps)
+and for the evaluation at the end of each epoch:
+
+```ruby
+adapter = RPEFT::LoRA.train(model: 'Qwen/Qwen2.5-Coder-0.5B', dataset: 'ruby_answers.jsonl') do |progress|
+  puts "step #{progress.step}/#{progress.total_steps} loss #{progress.loss}"
+end
+```
+
+A training step carries `loss` and `learning_rate`, an evaluation carries `eval_loss`, and both carry `step`, `total_steps`, and `epoch`; what a step lacks is `nil`.
+An exception raised in the block ends the run, saves no adapter, and is raised from `train`. Ctrl-C ends a run the same way, at the next logged step.
+`break` and `throw` cannot leave the block, which is called from Python: they end the run with `RPEFT::TrainingError`, so raise an exception to stop early.
+
+The same steps are kept with or without a block, so runs can be compared afterwards:
+
+```ruby
+adapter.metadata.dig('training', 'history')
+# => [{"step" => 5, "epoch" => 0.5, "loss" => 1.81, "learning_rate" => 0.00019}, ...]
+```
 
 ### Generation
 

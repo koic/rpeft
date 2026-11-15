@@ -34,11 +34,20 @@ class FakeBackend
     }
   end
 
+  # The steps a run reports, as the real backend does: each to the block as it happens, and all in the result.
+  # What the block raises ends the run and reaches the caller, as it does with the real backend.
+  HISTORY = [
+    {'step' => 2, 'epoch' => 0.5, 'loss' => 3.0, 'learning_rate' => 0.0002},
+    {'step' => 4, 'epoch' => 1.0, 'loss' => 2.0, 'learning_rate' => 0.0001},
+    {'step' => 4, 'epoch' => 1.0, 'eval_loss' => 2.75}
+  ].freeze
+
   def train_lora(config)
     [config['dataset_path'], config['eval_dataset_path']].compact.each do |path|
       @datasets[path] = File.readlines(path) if File.file?(path)
     end
     record(:train_lora, config)
+    HISTORY.each { |entry| yield(entry.merge('total_steps' => 4)) } if block_given?
     @responses.fetch(:train_lora) do
       {
         'adapter_path' => config['output_dir'],
@@ -54,6 +63,7 @@ class FakeBackend
         'steps' => 4,
         'trainable_params' => 8192,
         'total_params' => 100_000,
+        'history' => HISTORY,
         'effective_config' => effective_config(config)
       }
     end

@@ -18,7 +18,8 @@ module RPEFT
     POSITIVE_NUMBER_OPTIONS = %i(alpha learning_rate).freeze
 
     class << self
-      def train(model:, dataset:, eval_dataset: nil, rank: 8, alpha: 16, dropout: 0.05, target_modules: nil, epochs: 3, batch_size: 4, learning_rate: 2e-4, max_length: 512, train_on_prompt: false, output_dir: nil, device: :auto, checkpoints: false, resume: false)
+      # A block, if given, is called with a Progress for every logged training step and every evaluation.
+      def train(model:, dataset:, eval_dataset: nil, rank: 8, alpha: 16, dropout: 0.05, target_modules: nil, epochs: 3, batch_size: 4, learning_rate: 2e-4, max_length: 512, train_on_prompt: false, output_dir: nil, device: :auto, checkpoints: false, resume: false, &on_progress)
         options = {
           rank: rank,
           alpha: alpha,
@@ -42,9 +43,7 @@ module RPEFT
         resolved_device = Device.resolve(device)
 
         options[:eval_dataset] = evaluation_dataset
-        result = RPEFT.backend.train_lora(
-          request_payload(model, training_dataset, adapter_dir, resolved_device, options)
-        )
+        result = run_backend(request_payload(model, training_dataset, adapter_dir, resolved_device, options), on_progress)
 
         build_adapter(
           adapter_dir: adapter_dir,
@@ -66,6 +65,14 @@ module RPEFT
       end
 
       private
+
+      # The backend is given a block even when the caller gave none: an exception raised while the block runs ends the run,
+      # and Interrupt is such an exception, so Ctrl-C then ends a run at the next logged step rather than after the last one.
+      def run_backend(payload, on_progress)
+        RPEFT.backend.train_lora(payload) do |entry|
+          on_progress&.call(Progress.new(entry))
+        end
+      end
 
       def validate_options(options)
         POSITIVE_INTEGER_OPTIONS.each do |key|
@@ -212,7 +219,8 @@ module RPEFT
             'device' => result['device'] || device.to_s,
             'train_loss' => result['final_loss'],
             'eval_loss' => result['eval_loss'],
-            'duration_seconds' => result['train_runtime_seconds']
+            'duration_seconds' => result['train_runtime_seconds'],
+            'history' => result['history']
           }
         }
       end

@@ -2,7 +2,8 @@
 
 Imported through PyCall; not a public API. Every facade function takes
 a JSON string and returns a JSON string, so only plain strings cross
-the PyCall boundary.
+the PyCall boundary. The one callable that crosses, train_lora's
+on_progress, is itself handed JSON strings only.
 
 This module must stay importable without torch installed: all heavy
 imports live inside function bodies, and diagnostics() reports what is
@@ -53,12 +54,13 @@ def _repair_sys_executable():
 _repair_sys_executable()
 
 
-def train_lora(config_json):
+def train_lora(config_json, on_progress=None):
+    """on_progress, if given, is called with a JSON string per logged step and may return "stop"."""
     from . import _training, _versions
 
     _versions.require_minimums()
 
-    return _dumps(_training.train_lora(json.loads(config_json)))
+    return _dumps(_training.train_lora(json.loads(config_json), on_progress))
 
 
 def merge_lora(config_json):

@@ -7,7 +7,8 @@ module RPEFT
   #
   # A backend implements four methods, each taking and returning plain Hashes with String keys:
   #
-  #   train_lora(config)    -> Hash
+  #   train_lora(config)    -> Hash, yielding a progress Hash per logged step when given a block;
+  #                            what the block raises ends the run and is raised to the caller
   #   merge_lora(config)    -> Hash
   #   generate(config)      -> Hash
   #   detect_device(config) -> Hash

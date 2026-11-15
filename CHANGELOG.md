@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- A block given to `RPEFT::LoRA.train` receives the progress of the run (`RPEFT::LoRA::Progress`) at every logged step and evaluation.
+  An exception raised in the block ends the run
+- The logged steps are recorded in the adapter metadata (`training.history`), with or without a block
+- Ctrl-C now ends a training run at the next logged step instead of after the last one
+
 ## 0.3.0 (2026-11-15)
 
 A fine-tuned model can now leave RPEFT: exported to GGUF, it runs in Ollama, llama.cpp, and other local runtimes, with no Python where it is used.

@@ -54,8 +54,45 @@ module RPEFT
         @mutex = Mutex.new
       end
 
-      def train_lora(config)
-        call(:train_lora, config, default_error: TrainingError)
+      # Yields each progress entry as a Hash. Whatever is raised while the block runs ends the run and is raised
+      # from here once Python is back: PyCall drops an exception raised while Python is calling into Ruby,
+      # and the training would carry on as if nothing had happened. That includes Interrupt, which Ruby raises
+      # wherever its code happens to be running, so the rescue covers everything Python calls, not the block alone.
+      def train_lora(config, &on_progress)
+        return call(:train_lora, config, default_error: TrainingError) unless on_progress
+
+        failure = nil
+        callback = lambda do |json|
+          next 'stop' if failure
+
+          left_early = true
+          on_progress.call(JSON.parse(json.to_s))
+          left_early = false
+          nil
+        rescue Exception => e # rubocop:disable Lint/RescueException
+          left_early = false
+          failure = e
+          'stop'
+        ensure
+          # break and throw leave the block without raising, and PyCall drops them as it drops exceptions,
+          # so the run would go on to its end. They cannot be resumed once Python is back, so the run ends in an error;
+          # next cancels the jump and hands Python the answer that stops the run.
+          if left_early
+            failure ||= TrainingError.new(
+              'the progress block was left with break or throw, which cannot pass through Python; ' \
+              'raise an exception to end a run early'
+            )
+            next 'stop'
+          end
+        end
+        begin
+          result = call(:train_lora, config, callback, default_error: TrainingError)
+        rescue TrainingError
+          raise unless failure
+        end
+        raise failure if failure
+
+        result
       end
 
       def merge_lora(config)
@@ -76,10 +113,10 @@ module RPEFT
 
       private
 
-      def call(name, config, default_error:)
+      def call(name, config, *extra, default_error:)
         facade = backend_module
         result = if config
-          facade.public_send(name, JSON.generate(config))
+          facade.public_send(name, JSON.generate(config), *extra)
         else
           facade.public_send(name)
         end
