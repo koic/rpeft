@@ -1,6 +1,9 @@
 # Changelog
 
-## Unreleased
+## 0.4.0 (2026-11-21)
+
+A training run can now be followed from Ruby while it goes and compared with others afterwards. Code that passes no block behaves as in 0.3.0,
+except that Ctrl-C now stops a run at the next logged step instead of after the last one.
 
 - A block given to `RPEFT::LoRA.train` receives the progress of the run (`RPEFT::LoRA::Progress`) at every logged step and evaluation.
   An exception raised in the block ends the run
